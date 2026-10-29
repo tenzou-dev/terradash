@@ -18,7 +18,7 @@ dock aplikasi, dan navigasi ke tujuan — semuanya dalam satu layar.
 <p align="center">
   <img src="docs/direction.jpg" alt="Tampilan Direction TerraDash" width="430">
 
-  <img src="docs/settings.jpg" alt="Panel pengaturan TerraDash" width="430">
+  <img src="docs/setting.jpg" alt="Panel pengaturan TerraDash" width="430">
 </p>
 
 Tampilan di atas dirender pada 1042×600 (layar head unit 7"), skala 2×.
