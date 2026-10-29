@@ -1,0 +1,26 @@
+# --- Hasil build (dibuat ulang oleh build.ps1) ---
+android/build/
+android/build-probe/
+android/dist/
+android/app/assets/
+*.apk
+*.idsig
+
+# --- KUNCI TANDA TANGAN: jangan pernah di-commit! ---
+android/keystore/
+*.jks
+*.keystore
+
+# --- Toolchain lokal (JDK + Android SDK portabel, ratusan MB) ---
+.toolchain/
+
+# --- Catatan pribadi ---
+propt.txt
+
+# --- OS / editor ---
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.swp

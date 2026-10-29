@@ -1,0 +1,2842 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>TerraDash</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+  /* font jam (lokal, biar tetap jalan tanpa internet) */
+  @font-face {
+    font-family: 'Orbitron';
+    src: url('fonts/orbitron-700.woff2') format('woff2');
+    font-weight: 700; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Chakra Petch';
+    src: url('fonts/chakra-petch-600.woff2') format('woff2');
+    font-weight: 600; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Rajdhani';
+    src: url('fonts/rajdhani-600.woff2') format('woff2');
+    font-weight: 600; font-style: normal; font-display: swap;
+  }
+
+  :root {
+    --accent: #f5a524;
+    --text: #eaf1f8;
+    --muted: #9db0c6;
+    --clock-font: 'Orbitron', "Segoe UI", Roboto, sans-serif;
+    --clock-weight: 700;
+    --clock-track: .5px;
+    --clock-scale: 1;
+    --tile-filter: brightness(.95) contrast(1.05) saturate(.9);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    overflow: hidden; background: #05070a;
+    font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text);
+    user-select: none;
+  }
+
+  /* ---------------- MAP ---------------- */
+  #map { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: #0a1118; }
+  #map .leaflet-tile-pane { filter: var(--tile-filter); }
+
+  #tint {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none;
+    background:
+      radial-gradient(120% 90% at 20% 10%, rgba(24, 56, 100, .26), transparent 62%),
+      linear-gradient(100deg, rgba(4, 9, 15, .84) 0%, rgba(4, 9, 15, .46) 33%, rgba(4, 9, 15, 0) 60%),
+      radial-gradient(120% 120% at 80% 100%, rgba(0,0,0,.32), transparent 55%);
+  }
+
+  /* peta terang: HUD kiri/bawah tetap gelap biar kebaca */
+  body[data-map-mode="light"] #tint,
+  body[data-map-mode="street"] #tint,
+  body[data-map-mode="terrain"] #tint {
+    background:
+      linear-gradient(100deg, rgba(4, 9, 15, .9) 0%, rgba(4, 9, 15, .55) 32%, rgba(4, 9, 15, .04) 60%),
+      radial-gradient(70% 60% at 0% 100%, rgba(4, 9, 15, .92), transparent 72%),
+      radial-gradient(120% 120% at 80% 100%, rgba(0,0,0,.28), transparent 55%);
+  }
+  body[data-map-mode="satellite"] #tint {
+    background:
+      linear-gradient(100deg, rgba(3, 7, 12, .93) 0%, rgba(3, 7, 12, .6) 30%, rgba(3, 7, 12, .08) 58%),
+      radial-gradient(70% 60% at 0% 100%, rgba(3, 7, 12, .9), transparent 72%),
+      radial-gradient(120% 120% at 80% 100%, rgba(0,0,0,.3), transparent 55%);
+  }
+
+  body[data-map-mode="satellite"] { --tile-filter: brightness(.72) contrast(1.06) saturate(.95); }
+  body[data-map-mode="light"] { --tile-filter: brightness(.86) contrast(1.02) saturate(.9); }
+  body[data-map-mode="street"] { --tile-filter: brightness(.92) contrast(1.02) saturate(.9); }
+  body[data-map-mode="terrain"] { --tile-filter: brightness(.9) contrast(1.02) saturate(.92); }
+
+  /* ---------------- HUD ---------------- */
+  #hud {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+    padding: clamp(18px, 3.2vh, 34px) clamp(20px, 3.4vw, 44px);
+    display: flex; flex-direction: column;
+    pointer-events: none;
+  }
+  #hud .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+
+  .clock {
+    font-family: var(--clock-font);
+    font-weight: var(--clock-weight);
+    font-size: calc(var(--clock-scale) * clamp(58px, 11.4vw, 118px));
+    line-height: .9;
+    letter-spacing: var(--clock-track);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 24px rgba(0,0,0,.45);
+    white-space: nowrap;
+  }
+  .date {
+    margin-top: .55em;
+    font-size: clamp(13px, 1.9vw, 20px);
+    color: #d7e2ef;
+    letter-spacing: .2px;
+    text-shadow: 0 1px 10px rgba(0,0,0,.5);
+  }
+  .speed {
+    margin-top: .5em;
+    font-size: clamp(14px, 1.9vw, 20px);
+    color: var(--muted);
+    letter-spacing: .3px;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .speed b {
+    font-size: 1.55em; line-height: 1; color: #fff; font-weight: 600;
+    letter-spacing: -.5px; font-variant-numeric: tabular-nums;
+  }
+  .speed i { font-style: normal; font-size: .8em; letter-spacing: .5px; }
+
+  .spacer { flex: 1; }
+  .bottom { display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 14px); }
+
+  .weather { display: flex; align-items: center; gap: 14px; }
+  .wicon { width: clamp(30px, 4.4vw, 46px); height: clamp(30px, 4.4vw, 46px); color: var(--accent); }
+  .temp { font-size: clamp(24px, 3.6vw, 38px); font-weight: 400; line-height: 1; }
+  .place { font-size: clamp(10px, 1.3vw, 13px); color: var(--muted); margin-top: 4px; }
+
+  .prayers { display: flex; gap: clamp(12px, 2.6vw, 34px); align-items: flex-end; }
+  .prayer .nm {
+    font-size: clamp(8px, 1.05vw, 11px);
+    letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted);
+  }
+  .prayer .tm { font-size: clamp(12px, 1.7vw, 17px); margin-top: 3px; color: #d7e2ef; }
+  .prayer.next .nm { color: var(--accent); }
+  .prayer.next .tm { color: var(--accent); font-weight: 600; }
+
+  /* ---------------- TOMBOL ---------------- */
+  .actions { display: flex; gap: 10px; pointer-events: auto; }
+  .iconbtn {
+    width: clamp(40px, 5.2vw, 52px); height: clamp(40px, 5.2vw, 52px);
+    border-radius: 50%;
+    background: rgba(10, 16, 24, .55);
+    border: 1px solid rgba(255,255,255,.12);
+    color: #d7e2ef;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    flex: none;
+  }
+  .iconbtn:active { background: rgba(255,255,255,.14); }
+  .iconbtn svg { width: 46%; height: 46%; }
+
+  /* ---------------- PENCARIAN TUJUAN ---------------- */
+  .topRight { pointer-events: none; min-width: 0; }
+  .trRow { display: flex; gap: 10px; align-items: center; justify-content: flex-end; pointer-events: auto; min-width: 0; }
+  .searchWrap { position: relative; flex: 0 1 240px; min-width: 0; }
+  .search {
+    display: flex; align-items: center; gap: 8px;
+    height: clamp(40px, 5.2vw, 52px);
+    width: 100%; min-width: 112px;
+    padding: 0 10px 0 14px;
+    border-radius: 999px;
+    background: rgba(10, 16, 24, .6);
+    border: 1px solid rgba(255,255,255,.12);
+    backdrop-filter: blur(8px);
+    transition: border-color .15s;
+  }
+  .search:focus-within { border-color: rgba(245,165,36,.5); }
+  .search > svg { width: 17px; height: 17px; color: var(--muted); flex: none; }
+  .search input {
+    flex: 1 1 auto; min-width: 0;
+    background: transparent; border: 0; outline: none;
+    color: #eaf1f8; font-size: 14px; font-family: inherit;
+  }
+  .search input::placeholder { color: #7f93a8; }
+  .search .clr {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    border: 0; background: rgba(255,255,255,.13); color: #cfe0f0;
+    font-size: 14px; line-height: 1; cursor: pointer; display: none; padding: 0;
+  }
+  .search.has .clr { display: block; }
+
+  .sugg {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    width: min(380px, 62vw);
+    max-height: 42vh; overflow-y: auto;
+    background: #0b1219f7; border: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px; padding: 6px; z-index: 60;
+    box-shadow: 0 20px 44px rgba(0,0,0,.55);
+  }
+  .sugg.hidden { display: none; }
+  .sugg button {
+    display: block; width: 100%; text-align: left;
+    background: transparent; border: 0; color: #d7e2ef;
+    padding: 9px 11px; border-radius: 10px;
+    font: inherit; font-size: 13.5px; cursor: pointer;
+  }
+  .sugg button:active { background: rgba(255,255,255,.08); }
+  .sugg .s2 { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .sugg .msg { padding: 11px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+  #routeCard {
+    display: none;
+    width: min(340px, 42vw); margin-top: 12px; margin-left: auto;
+    background: rgba(9, 14, 21, .87);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 18px; padding: 12px 14px 14px;
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+  }
+  #routeCard.on { display: block; }
+  .rcTop { display: flex; align-items: flex-start; gap: 10px; }
+  .rcArrow {
+    flex: none; width: 40px; height: 40px; border-radius: 12px;
+    background: rgba(245,165,36,.14); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 21px; line-height: 1;
+  }
+  .rcText { flex: 1 1 auto; min-width: 0; }
+  .rcInstr { font-size: 13.5px; color: #eaf1f8; line-height: 1.32; }
+  .rcInstr b { color: var(--accent); font-weight: 600; }
+  .rcSub { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .rcX {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    border: 0; background: rgba(255,255,255,.09); color: #cfe0f0;
+    font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
+  }
+  .rcStats { display: flex; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .rcStats b { color: #eaf1f8; font-weight: 600; font-size: 13.5px; }
+  .rcBar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); margin-top: 10px; overflow: hidden; }
+  .rcBar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+
+  .dpin {
+    width: 20px; height: 20px; background: var(--accent);
+    border-radius: 50% 50% 50% 2px; transform: rotate(45deg);
+    border: 2px solid #0a1118; box-shadow: 0 0 12px rgba(245,165,36,.55);
+  }
+
+  /* ---------------- DOCK BAWAH ---------------- */
+  .dockRow { display: flex; align-items: center; gap: 14px; }
+
+  /* Pemutar musik dimatikan: jadwal sholat + dock aplikasi berbagi satu baris,
+     jadi tidak ada pita kosong di bawah jadwal sholat. */
+  body.no-player .bottom {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) auto;
+    grid-template-areas: "w w" "p d";
+    column-gap: clamp(14px, 2vw, 28px);
+    align-items: end;
+  }
+  body.no-player .weather { grid-area: w; }
+  body.no-player .prayers { grid-area: p; }
+  body.no-player .dockRow { grid-area: d; justify-self: end; }
+
+  .player {
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 10px;
+    flex: 0 0 auto;
+    width: clamp(250px, 34vw, 420px);
+    padding: 9px 12px 13px;
+    border-radius: 16px;
+    background: rgba(9, 14, 21, .7);
+    border: 1px solid rgba(255,255,255,.09);
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+  }
+  .player .art {
+    flex: none; width: clamp(40px, 4.6vw, 50px); height: clamp(40px, 4.6vw, 50px);
+    border-radius: 12px;
+    background: rgba(255,255,255,.06); overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent);
+  }
+  .player .art img { width: 100%; height: 100%; object-fit: cover; }
+  .player .art svg { width: 26px; height: 26px; }
+  .player .meta { flex: 1 1 auto; min-width: 0; }
+  .player .ttl {
+    font-size: 13.5px; color: #eaf1f8;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .player .who {
+    font-size: 11.5px; color: var(--muted); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .player .ctl { flex: none; display: flex; gap: 4px; align-items: center; }
+  .pbtn {
+    width: clamp(26px, 3vw, 32px); height: clamp(26px, 3vw, 32px);
+    border-radius: 50%; border: 0;
+    background: transparent; color: #d7e2ef; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .pbtn:active { background: rgba(255,255,255,.12); }
+  .pbtn svg { width: 15px; height: 15px; }
+  .pbtn.big {
+    background: var(--accent); color: #0a1118;
+    width: clamp(28px, 3.2vw, 34px); height: clamp(28px, 3.2vw, 34px);
+  }
+  .pbtn.big svg { width: 16px; height: 16px; }
+  .player .pb {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+    background: rgba(255,255,255,.08); cursor: pointer;
+  }
+  .player .pb i { display: block; height: 100%; width: 0; background: var(--accent); }
+
+  .appDock { margin-left: auto; display: flex; align-items: center; gap: 10px; pointer-events: auto; }
+  .dockBtn {
+    width: clamp(44px, 5.4vw, 54px); height: clamp(44px, 5.4vw, 54px);
+    border-radius: 15px; border: 1px solid rgba(255,255,255,.09);
+    background: rgba(9, 14, 21, .66);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    color: #d7e2ef; cursor: pointer; overflow: hidden;
+    position: relative; padding: 0;
+  }
+  .dockBtn img { width: 100%; height: 100%; object-fit: cover; }
+  .dockBtn .ini { font-size: 17px; font-weight: 600; }
+  .dockBtn.all { background: rgba(255,255,255,.09); }
+  .dockBtn.all svg { width: 40%; height: 40%; }
+  .dockBtn.ghost { opacity: .38; border-style: dashed; background: transparent; }
+  .dockBtn:active { background: rgba(255,255,255,.16); }
+
+  /* ---------------- FULLSCREEN BERSIH ---------------- */
+  body.clean .dockRow,
+  body.clean .searchWrap,
+  body.clean #btnSettings,
+  body.clean #btnFull,
+  body.clean #routeCard { display: none !important; }
+  body.clean .speed { font-size: clamp(17px, 2.2vw, 24px); }
+  body.clean .speed b { color: var(--accent); font-size: 1.7em; }
+  body.clean #credit { opacity: .6; }
+
+  #btnExitFull {
+    position: fixed; right: 14px; bottom: 34px; z-index: 45;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(10,16,24,.45); border: 1px solid rgba(255,255,255,.16);
+    color: #d7e2ef; opacity: .3; display: none;
+    align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  body.clean #btnExitFull { display: flex; }
+  #btnExitFull:active { opacity: 1; }
+  #btnExitFull svg { width: 40%; height: 40%; }
+
+  #credit {
+    position: fixed; right: clamp(12px, 1.6vw, 20px); bottom: clamp(8px, 1.2vh, 14px);
+    font-size: 11px; color: rgba(255,255,255,.55);
+    text-shadow: 0 1px 6px rgba(0,0,0,.6);
+    pointer-events: none;
+  }
+
+  /* ---------------- OVERLAY ---------------- */
+  .overlay {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 50;
+    background: rgba(3, 6, 10, .6);
+    backdrop-filter: blur(7px);
+    display: flex; justify-content: flex-end;
+  }
+  .overlay.hidden { display: none; }
+  .overlay.center { align-items: center; justify-content: center; }
+
+  .sheet {
+    width: min(430px, 90vw); height: 100%;
+    background: #0b1219f7;
+    border-left: 1px solid rgba(255,255,255,.08);
+    padding: 22px 22px 34px;
+    overflow-y: auto;
+  }
+  .sheet.wide {
+    width: min(880px, 92vw); height: min(560px, 86vh);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 24px;
+    padding: 22px 24px;
+  }
+  .sheetHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .sheetHead h2 { font-size: 18px; font-weight: 600; margin: 0; }
+
+  /* panel pengaturan panjang -> judul + tombol tutup ikut nempel di atas */
+  #settingsOverlay .sheetHead {
+    position: sticky; top: -22px; z-index: 6;
+    margin: -22px -22px 18px;
+    padding: 22px 22px 12px;
+    background: #0b1219;
+  }
+  .close {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,.07); border: 0; color: #d7e2ef;
+    font-size: 22px; line-height: 1; cursor: pointer;
+  }
+
+  .group { margin-bottom: 22px; }
+  .group > label:not(.row) { display: block; font-size: 12px; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; margin-bottom: 10px; }
+  .group .val { float: right; color: var(--accent); }
+
+  .swatches { display: flex; gap: 12px; }
+  .swatch {
+    width: 38px; height: 38px; border-radius: 50%; border: 2px solid transparent;
+    cursor: pointer; outline: none;
+  }
+  .swatch.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.12); }
+
+  select, input[type=range] { width: 100%; }
+  select {
+    background: #131c26; color: #eaf1f8; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px; padding: 12px; font-size: 15px; outline: none;
+  }
+  input[type=range] {
+    -webkit-appearance: none; height: 34px; background: transparent;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px; background: rgba(255,255,255,.14);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); margin-top: -9px; border: 0;
+  }
+
+  .row {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%;
+    padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+    font-size: 15px; cursor: pointer;
+  }
+  .row:last-child { border-bottom: 0; }
+  .row > span { flex: 1 1 auto; min-width: 0; text-align: left; }
+  .row input { display: none; }
+  .sw-track {
+    display: block;
+    width: 48px; height: 28px; border-radius: 14px;
+    background: rgba(255,255,255,.16); position: relative; transition: background .15s;
+    flex: none; margin-left: auto;
+  }
+  .sw-track::after {
+    content: ""; position: absolute; top: 4px; left: 4px;
+    width: 20px; height: 20px; border-radius: 50%; background: #fff;
+    transition: transform .15s;
+  }
+  .row input:checked + .sw-track { background: var(--accent); }
+  .row input:checked + .sw-track::after { transform: translateX(20px); }
+
+  .ghost {
+    width: 100%; padding: 14px; border-radius: 12px;
+    background: transparent; color: var(--muted);
+    border: 1px solid rgba(255,255,255,.14); font-size: 14px; cursor: pointer;
+  }
+  .ghost + .ghost { margin-top: 10px; }
+  .ghost.danger { color: #ff8f8f; border-color: rgba(255,120,120,.28); }
+  .ghost:disabled { opacity: .45; cursor: default; }
+
+  .about {
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px; padding: 14px 16px;
+    background: rgba(255,255,255,.03);
+  }
+  .about .nm { font-size: 16px; color: #eaf1f8; font-weight: 600; }
+  .about .ver { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .about .cr { font-size: 11.5px; color: rgba(255,255,255,.45); margin-top: 10px; }
+
+  .sub { font-size: 11.5px; color: var(--muted); line-height: 1.55; margin-top: 8px; }
+  .sub b { color: #d7e2ef; font-weight: 500; }
+  .dual { display: flex; gap: 10px; margin-bottom: 10px; }
+  .dual select { flex: 1; min-width: 0; }
+
+  /* chip aplikasi terpilih (pengaturan dock) */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .chips .none { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .chip {
+    display: flex; align-items: center; gap: 8px; max-width: 100%;
+    padding: 5px 6px 5px 6px; border-radius: 999px;
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+    font-size: 12.5px; color: #c9d6e6;
+  }
+  .chip .box {
+    width: 24px; height: 24px; border-radius: 7px; overflow: hidden; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #0a1118; font-size: 11px; font-weight: 600;
+  }
+  .chip .box img { width: 100%; height: 100%; object-fit: cover; }
+  .chip .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+  .chip .rm {
+    flex: none; width: 22px; height: 22px; border-radius: 50%; border: 0;
+    background: rgba(255,255,255,.1); color: #c9d6e6; font-size: 14px;
+    line-height: 1; cursor: pointer; padding: 0;
+  }
+
+  /* dialog pilih aplikasi dock */
+  .pickSheet { display: flex; flex-direction: column; }
+  .pickSheet .searchInput {
+    width: 100%; background: #131c26; color: #eaf1f8;
+    border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
+    padding: 11px 14px; font-size: 14px; outline: none;
+    font-family: inherit; margin-bottom: 6px; flex: none;
+  }
+  .pickGrid { flex: 1 1 auto; overflow-y: auto; align-content: start; padding: 4px 4px 8px 0; }
+  .pickGrid .app { position: relative; }
+  .pickGrid .app.on { border-color: var(--accent); background: rgba(245,165,36,.1); }
+  .pickGrid .app.on::after {
+    content: "\2713"; position: absolute; top: 6px; right: 9px;
+    color: var(--accent); font-size: 14px; font-weight: 700;
+  }
+
+  .pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pick button {
+    padding: 10px 8px; border-radius: 10px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.1);
+    color: #c9d6e6; font-size: 13px; cursor: pointer;
+    font-family: inherit; line-height: 1.2;
+  }
+  .pick button:active { background: rgba(255,255,255,.1); }
+  .pick button.active {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(245,165,36,.1);
+  }
+  .pick.fonts button { padding: 12px 8px; font-size: 17px; }
+  .pick.fonts button[data-font="orbitron"] { font-family: 'Orbitron'; font-size: 13px; }
+  .pick.fonts button[data-font="chakra"] { font-family: 'Chakra Petch'; font-size: 16px; }
+  .pick.fonts button[data-font="rajdhani"] { font-family: 'Rajdhani'; font-size: 18px; }
+  .bar {
+    height: 6px; border-radius: 3px; overflow: hidden;
+    background: rgba(255,255,255,.1); margin-top: 10px; display: none;
+  }
+  .bar.on { display: block; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+
+  #place.live::before {
+    content: ""; display: inline-block;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); margin-right: 6px; vertical-align: middle;
+    opacity: .9;
+  }
+
+  /* ---------------- APP DRAWER ---------------- */
+  .appGrid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 16px; padding-top: 4px;
+  }
+  .app {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 12px 6px; border-radius: 16px; cursor: pointer;
+    background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05);
+  }
+  .app:active { background: rgba(255,255,255,.1); }
+  .app .box {
+    width: 58px; height: 58px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 600; color: #0a1118;
+    background: var(--accent); overflow: hidden;
+  }
+  .app .box img { width: 100%; height: 100%; object-fit: cover; }
+  .app .nm { font-size: 12px; color: #c9d6e6; text-align: center; line-height: 1.25; }
+  .empty { grid-column: 1 / -1; color: var(--muted); font-size: 14px; line-height: 1.6; padding: 18px 4px; max-width: 520px; }
+
+  /* ---------------- MARKER ---------------- */
+  .loc { position: relative; }
+  .loc .dot {
+    position: absolute; top: 6px; right: 6px; bottom: 6px; left: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(245,165,36,.25), 0 0 18px rgba(245,165,36,.5);
+  }
+  .loc .pulse {
+    position: absolute; top: -10px; right: -10px; bottom: -10px; left: -10px; border-radius: 50%;
+    border: 2px solid rgba(245,165,36,.4);
+    animation: pulse 2.6s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(.55); opacity: .9; }
+    70% { transform: scale(1.25); opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* WebView lama (< Chromium 84) belum mendukung gap di flexbox.
+     Kelas .no-flex-gap dipasang dari JS kalau terdeteksi. */
+  .no-flex-gap .bottom > * + * { margin-top: clamp(8px, 1.4vh, 14px); }
+  .no-flex-gap .prayers > * + * { margin-left: clamp(12px, 2.6vw, 34px); }
+  .no-flex-gap .weather > * + * { margin-left: 14px; }
+  .no-flex-gap .trRow > * + * { margin-left: 10px; }
+  .no-flex-gap .search > * + * { margin-left: 8px; }
+  .no-flex-gap .player > * + * { margin-left: 10px; }
+  .no-flex-gap .player .ctl > * + * { margin-left: 4px; }
+  .no-flex-gap .appDock > * + * { margin-left: 10px; }
+  .no-flex-gap .rcTop > * + * { margin-left: 10px; }
+  .no-flex-gap .rcStats > * + * { margin-left: 14px; }
+  .no-flex-gap .speed > * + * { margin-left: 6px; }
+  .no-flex-gap .swatches > * + * { margin-left: 12px; }
+  .no-flex-gap .dual > * + * { margin-left: 10px; }
+  .no-flex-gap .app > * + * { margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="tint"></div>
+
+  <div id="hud">
+    <div class="top">
+      <div>
+        <div class="clock" id="clock">--:--</div>
+        <div class="date" id="date">&nbsp;</div>
+        <div class="speed" id="speedBlock"><b id="speed">0</b><i>km/h</i></div>
+      </div>
+
+      <div class="topRight">
+        <div class="trRow">
+          <div class="searchWrap">
+            <div class="search" id="searchBox">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>
+              </svg>
+              <input id="destInput" type="text" placeholder="Cari tujuan…" autocomplete="off" spellcheck="false">
+              <button class="clr" id="destClear" title="Hapus">&times;</button>
+            </div>
+            <div class="sugg hidden" id="sugg"></div>
+          </div>
+
+          <button class="iconbtn" id="btnSettings" title="Pengaturan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+            </svg>
+          </button>
+
+          <button class="iconbtn" id="btnFull" title="Layar penuh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+            </svg>
+          </button>
+        </div>
+
+        <div id="routeCard">
+          <div class="rcTop">
+            <div class="rcArrow" id="rcArrow">↑</div>
+            <div class="rcText">
+              <div class="rcInstr" id="rcInstr">Pilih tujuan untuk mulai navigasi.</div>
+              <div class="rcSub" id="rcSub"></div>
+            </div>
+            <button class="rcX" id="rcClose" title="Akhiri rute">&times;</button>
+          </div>
+          <div class="rcStats">
+            <div><b id="rcKm">—</b> km</div>
+            <div><b id="rcMin">—</b> mnt</div>
+            <div>tiba <b id="rcEta">—</b></div>
+          </div>
+          <div class="rcBar"><i id="rcBar"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="bottom">
+      <div class="weather" id="weatherBlock">
+        <div id="wicon"></div>
+        <div>
+          <div class="temp" id="temp">--&deg;</div>
+          <div class="place" id="place">memuat lokasi...</div>
+        </div>
+      </div>
+      <div class="prayers" id="prayers"></div>
+
+      <div class="dockRow" id="dockRow">
+        <div class="player" id="player">
+          <div class="art" id="pArt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>
+            </svg>
+          </div>
+          <div class="meta">
+            <div class="ttl" id="pTitle">Belum ada musik</div>
+            <div class="who" id="pArtist">Pemutar belum tersambung</div>
+          </div>
+          <div class="ctl">
+            <button class="pbtn" id="pPrev" title="Sebelumnya">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
+            </button>
+            <button class="pbtn big" id="pPlay" title="Putar / jeda">
+              <svg id="pPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button class="pbtn" id="pNext" title="Berikutnya">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
+            </button>
+          </div>
+          <div class="pb" id="pBar"><i id="pFill"></i></div>
+        </div>
+
+        <div class="appDock" id="appDock"></div>
+      </div>
+    </div>
+  </div>
+
+  <button id="btnExitFull" title="Keluar layar penuh">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+      <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>
+    </svg>
+  </button>
+
+  <div id="credit">Powered by Esri</div>
+
+  <!-- APP DRAWER -->
+  <div class="overlay center hidden" id="appsOverlay">
+    <div class="sheet wide">
+      <div class="sheetHead">
+        <h2>Aplikasi</h2>
+        <button class="close" data-close="appsOverlay">&times;</button>
+      </div>
+      <div class="appGrid" id="appGrid"></div>
+    </div>
+  </div>
+
+  <!-- PILIH APLIKASI DOCK -->
+  <div class="overlay center hidden" id="dockPickOverlay">
+    <div class="sheet wide pickSheet">
+      <div class="sheetHead">
+        <h2>Pilih aplikasi dock</h2>
+        <button class="close" data-close="dockPickOverlay">&times;</button>
+      </div>
+      <input class="searchInput" id="dockSearch" type="text" placeholder="Cari aplikasi…" autocomplete="off">
+      <div class="sub" id="dockCount" style="margin-top:2px">0 / 6 dipilih</div>
+      <div class="appGrid pickGrid" id="dockPickGrid"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="overlay hidden" id="settingsOverlay">
+    <div class="sheet">
+      <div class="sheetHead">
+        <h2>Pengaturan tampilan</h2>
+        <button class="close" data-close="settingsOverlay">&times;</button>
+      </div>
+
+      <div class="group">
+        <label>Warna aksen</label>
+        <div class="swatches" id="swatches"></div>
+      </div>
+
+      <div class="group">
+        <label>Kota manual</label>
+        <select id="citySel"></select>
+        <div class="sub">Dipakai kalau <b>Ikuti GPS</b> dimatikan. Saat GPS aktif, nama kota, cuaca, dan jadwal sholat ikut posisi mobil secara otomatis.</div>
+      </div>
+
+      <div class="group">
+        <label>Geser peta ke kanan <span class="val" id="shiftVal">12%</span></label>
+        <input type="range" id="shift" min="0" max="30" step="1">
+      </div>
+
+      <div class="group">
+        <label>Zoom peta <span class="val" id="zoomVal">15</span></label>
+        <input type="range" id="zoom" min="12" max="18" step="1">
+      </div>
+
+      <div class="group">
+        <label>Tampilan peta</label>
+        <div class="pick" id="mapModePick">
+          <button data-mode="dark">Gelap</button>
+          <button data-mode="satellite">Satelit</button>
+          <button data-mode="light">Terang</button>
+          <button data-mode="street">Jalan</button>
+          <button data-mode="terrain">Terrain</button>
+        </div>
+        <div class="sub" id="mapModeHint">Detail Esri Dark Gray maksimal zoom 16; di atas itu tile diperbesar.</div>
+      </div>
+
+      <div class="group">
+        <label>Font jam</label>
+        <div class="pick fonts" id="fontPick">
+          <button data-font="system">Sistem</button>
+          <button data-font="orbitron">Orbitron</button>
+          <button data-font="chakra">Chakra Petch</button>
+          <button data-font="rajdhani">Rajdhani</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <label>Ukuran jam <span class="val" id="clockSizeVal">100%</span></label>
+        <input type="range" id="clockSize" min="70" max="140" step="5">
+      </div>
+
+      <div class="group">
+        <label>Tampilan</label>
+        <label class="row"><span>Ikuti GPS (lokasi otomatis)</span><input type="checkbox" id="followGps"><i class="sw-track"></i></label>
+        <label class="row"><span>Kecepatan</span><input type="checkbox" id="showSpeed"><i class="sw-track"></i></label>
+        <label class="row"><span>Cuaca</span><input type="checkbox" id="showWeather"><i class="sw-track"></i></label>
+        <label class="row"><span>Jadwal sholat</span><input type="checkbox" id="showPrayers"><i class="sw-track"></i></label>
+        <label class="row"><span>Pemutar musik</span><input type="checkbox" id="showPlayer"><i class="sw-track"></i></label>
+        <label class="row"><span>Format 24 jam</span><input type="checkbox" id="h24"><i class="sw-track"></i></label>
+      </div>
+
+      <div class="group">
+        <label>Dock aplikasi</label>
+        <div class="chips" id="dockPick"></div>
+        <button class="ghost" id="dockPickBtn">Pilih aplikasi…</button>
+        <div class="sub" id="dockHint">Maksimal 6 aplikasi. <b>Semua aplikasi</b> selalu di ujung kanan. Perubahan langsung tersimpan sebagai default.</div>
+      </div>
+
+      <div class="group">
+        <label>Peta offline</label>
+        <div class="sub" id="offInfo" style="margin-top:0;margin-bottom:10px">Menghitung cache...</div>
+        <div class="dual">
+          <select id="offRadius">
+            <option value="3">Radius 3 km</option>
+            <option value="5" selected>Radius 5 km</option>
+            <option value="10">Radius 10 km</option>
+            <option value="20">Radius 20 km</option>
+          </select>
+          <select id="offZoom">
+            <option value="14">s/d zoom 14</option>
+            <option value="15" selected>s/d zoom 15</option>
+            <option value="16">s/d zoom 16</option>
+          </select>
+        </div>
+        <div class="sub" id="offEst" style="margin-top:0;margin-bottom:10px">&nbsp;</div>
+        <button class="ghost" id="offDownload">Unduh peta sekitar sini</button>
+        <div class="bar" id="offBar"><i></i></div>
+        <div class="sub" id="offProgress">&nbsp;</div>
+        <button class="ghost danger" id="offClear">Hapus cache peta</button>
+      </div>
+
+      <div class="group">
+        <label>Tentang aplikasi</label>
+        <div class="about">
+          <div class="nm">TerraDash</div>
+          <div class="ver">Versi 1.0.3</div>
+          <div class="cr">&copy; TenZou.Dev 2026</div>
+        </div>
+        <button class="ghost" id="notifBtn" style="display:none;margin-top:10px">Aktifkan akses notifikasi (kontrol musik)</button>
+        <div class="sub" id="notifHelp" style="display:none">Kalau muncul <b>&ldquo;App was denied access&rdquo;</b> (Android 13+ memblokir izin khusus untuk app sideload): tutup dialognya, tekan <b>Buka info aplikasi</b> di bawah &rarr; ketuk titik tiga <b>&#8942;</b> kanan atas &rarr; <b>Allow restricted settings</b>. Setelah itu aktifkan lagi akses notifikasinya.</div>
+        <button class="ghost" id="appInfoBtn" style="display:none;margin-top:8px">Buka info aplikasi (allow restricted settings)</button>
+        <button class="ghost" id="homeBtn" style="display:none;margin-top:8px">Jadikan launcher default</button>
+      </div>
+
+      <button class="ghost" id="reset">Kembalikan default</button>
+    </div>
+  </div>
+
+<script src="vendor/leaflet.js"></script>
+<script>
+/* Deteksi dukungan `gap` pada flexbox (WebView lama belum punya). */
+(function () {
+  try {
+    const p = document.createElement('div');
+    p.style.cssText = 'display:flex;flex-direction:column;position:absolute;visibility:hidden;gap:9px';
+    p.innerHTML = '<i style="height:5px"></i><i style="height:5px"></i>';
+    document.body.appendChild(p);
+    const ok = p.offsetHeight >= 19;
+    p.parentNode.removeChild(p);
+    if (!ok) document.documentElement.classList.add('no-flex-gap');
+  } catch (e) {}
+})();
+
+/* Laporkan error JavaScript ke wrapper Android supaya bisa dibaca di layar
+   diagnostik (bukan penyebab app mati, tapi berguna kalau dashboard hitam). */
+window.addEventListener('error', function (e) {
+  try {
+    if (window.AndroidBridge && AndroidBridge.logError) {
+      AndroidBridge.logError('js: ' + (e.message || 'error') + ' @ ' +
+        (e.filename || '?') + ':' + (e.lineno || 0));
+    }
+  } catch (err) {}
+});
+window.addEventListener('unhandledrejection', function (e) {
+  try {
+    if (window.AndroidBridge && AndroidBridge.logError) {
+      const r = e && e.reason;
+      AndroidBridge.logError('promise: ' + ((r && (r.message || r)) || 'rejected'));
+    }
+  } catch (err) {}
+});
+
+/* =====================================================================
+   KONFIGURASI
+   ===================================================================== */
+const CITIES = [
+  { name: 'Tuban',      lat: -6.8976,  lon: 112.0649 },
+  { name: 'Surabaya',   lat: -7.2575,  lon: 112.7521 },
+  { name: 'Semarang',   lat: -6.9667,  lon: 110.4167 },
+  { name: 'Yogyakarta', lat: -7.7956,  lon: 110.3695 },
+  { name: 'Bandung',    lat: -6.9175,  lon: 107.6191 },
+  { name: 'Jakarta',    lat: -6.2088,  lon: 106.8456 },
+  { name: 'Padang',     lat: -0.9471,  lon: 100.4172 },
+  { name: 'Medan',      lat: 3.5952,   lon: 98.6722 },
+  { name: 'Palembang',  lat: -2.9761,  lon: 104.7754 },
+  { name: 'Makassar',   lat: -5.1477,  lon: 119.4327 },
+  { name: 'Balikpapan', lat: -1.2379,  lon: 116.8529 },
+  { name: 'Denpasar',   lat: -8.6705,  lon: 115.2126 }
+];
+
+const DEFAULTS = {
+  accent: '#f5a524',
+  city: 'Tuban',
+  lat: -6.8976,
+  lon: 112.0649,
+  zoom: 15,
+  shift: 12,          // persen geser peta ke kanan
+  mapMode: 'satellite', // satellite | dark | light | street | terrain
+  clockFont: 'orbitron',
+  clockScale: 100,
+  followGps: true,
+  showSpeed: true,
+  showWeather: true,
+  showPrayers: true,
+  showPlayer: true,
+  h24: true,
+  prayerMethod: 20,   // 20 = Kemenag RI
+  dockApps: []        // pkg yang dipin ke dock bawah (maks 6)
+};
+
+const STORE_KEY = 'hu.dashboard.cfg.v2';
+const CFG_REV = 2;   // naikkan kalau default berubah dan perlu migrasi sekali
+const PLACE_KEY = 'hu.dashboard.place';
+const PRAYER_KEY = 'hu.dashboard.prayer';
+let state = loadState();
+
+function loadState() {
+  let st;
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    st = raw ? Object.assign({}, DEFAULTS, JSON.parse(raw)) : Object.assign({}, DEFAULTS);
+  } catch (e) {
+    st = Object.assign({}, DEFAULTS);
+  }
+  /* Migrasi sekali: default peta pindah dari "gelap" ke "satelit".
+     Setelah ini pilihan pengguna tidak diubah lagi. */
+  if (!st.cfgRev || st.cfgRev < CFG_REV) {
+    st.mapMode = 'satellite';
+    st.cfgRev = CFG_REV;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(st)); } catch (e) {}
+  }
+  return st;
+}
+function saveState() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+/* =====================================================================
+   JAM & TANGGAL
+   ===================================================================== */
+const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const pad2 = n => String(n).padStart(2, '0');
+
+function tickClock() {
+  const d = new Date();
+  let hh = d.getHours();
+  const mm = pad2(d.getMinutes());
+  let suffix = '';
+
+  if (!state.h24) {
+    suffix = hh < 12 ? ' AM' : ' PM';
+    hh = hh % 12 || 12;
+  } else {
+    hh = pad2(hh);
+  }
+
+  document.getElementById('clock').textContent = hh + ':' + mm + suffix;
+  document.getElementById('date').textContent =
+    HARI[d.getDay()] + ', ' + d.getDate() + ' ' + BULAN[d.getMonth()] + ' ' + d.getFullYear();
+}
+setInterval(tickClock, 1000);
+
+/* =====================================================================
+   MAP
+   ===================================================================== */
+const map = L.map('map', {
+  zoomControl: false,
+  attributionControl: false,
+  dragging: false,
+  touchZoom: false,
+  scrollWheelZoom: false,
+  doubleClickZoom: false,
+  boxZoom: false,
+  keyboard: false,
+  zoomAnimation: false,
+  fadeAnimation: false,
+  markerZoomAnimation: false,
+  preferCanvas: true
+}).setView([state.lat, state.lon], state.zoom);
+
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+const ESRI_BASE = ESRI + 'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const ESRI_REF  = ESRI + 'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+const ESRI_LIGHT_BASE = ESRI + 'Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const ESRI_LIGHT_REF  = ESRI + 'Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+const ESRI_IMAGERY    = ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ESRI_STREET     = ESRI + 'World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+const ESRI_TOPO       = ESRI + 'World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+const ESRI_ROADS      = ESRI + 'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}';
+const ESRI_PLACES     = ESRI + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+
+/* maxNative = zoom asli tile. Di atas itu Leaflet memperbesar tile terakhir
+   (Esri Canvas berhenti di z16, Street/Topo di z17, Imagery di z18). */
+const MAP_MODES = {
+  dark: {
+    label: 'Gelap',
+    base: { url: ESRI_BASE, maxNative: 16 },
+    ref:  { url: ESRI_REF,  maxNative: 16 },
+    credit: 'Powered by Esri'
+  },
+  satellite: {
+    label: 'Satelit',
+    base: { url: ESRI_IMAGERY, maxNative: 18 },
+    ref:  { url: ESRI_ROADS,   maxNative: 18 },
+    ref2: { url: ESRI_PLACES,  maxNative: 18 },
+    credit: 'Imagery © Esri, Maxar, Earthstar Geographics'
+  },
+  light: {
+    label: 'Terang',
+    base: { url: ESRI_LIGHT_BASE, maxNative: 16 },
+    ref:  { url: ESRI_LIGHT_REF,  maxNative: 16 },
+    credit: 'Powered by Esri'
+  },
+  street: {
+    label: 'Jalan',
+    base: { url: ESRI_STREET, maxNative: 17 },
+    credit: 'Powered by Esri'
+  },
+  terrain: {
+    label: 'Terrain',
+    base: { url: ESRI_TOPO, maxNative: 17 },
+    credit: 'Powered by Esri'
+  }
+};
+
+/* ---------------------------------------------------------------------
+   CACHE TILE OFFLINE (IndexedDB)
+   Tile yang pernah tampil otomatis disimpan, jadi saat sinyal hilang
+   area yang sudah pernah dilewati tetap muncul.
+   --------------------------------------------------------------------- */
+const TileCache = (() => {
+  const DB_NAME = 'hu-tiles';
+  const STORE = 'tiles';
+  const MAX_TILES = 24000;
+  let dbPromise = null;
+  const mem = new Map();
+  const MEM_MAX = 400;
+
+  function memPut(url, blob) {
+    mem.set(url, blob);
+    while (mem.size > MEM_MAX) mem.delete(mem.keys().next().value);
+  }
+
+  function open() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(resolve => {
+      let req;
+      try { req = indexedDB.open(DB_NAME, 1); } catch (e) { return resolve(null); }
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          const os = db.createObjectStore(STORE, { keyPath: 'url' });
+          os.createIndex('t', 't');
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    });
+    return dbPromise;
+  }
+
+  async function get(url) {
+    if (mem.has(url)) return mem.get(url);
+    const db = await open();
+    if (!db) return null;
+    return new Promise(resolve => {
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(url);
+      req.onsuccess = () => {
+        const row = req.result;
+        if (row && row.b) { memPut(url, row.b); resolve(row.b); } else resolve(null);
+      };
+      req.onerror = () => resolve(null);
+    });
+  }
+
+  async function put(url, blob) {
+    memPut(url, blob);
+    const db = await open();
+    if (!db) return;
+    await new Promise(resolve => {
+      const t = db.transaction(STORE, 'readwrite');
+      t.objectStore(STORE).put({ url, b: blob, t: Date.now() });
+      t.oncomplete = () => resolve();
+      t.onerror = () => resolve();
+      t.onabort = () => resolve();
+    });
+  }
+
+  async function has(url) {
+    if (mem.has(url)) return true;
+    const db = await open();
+    if (!db) return false;
+    return new Promise(resolve => {
+      const req = db.transaction(STORE, 'readonly').objectStore(STORE).count(url);
+      req.onsuccess = () => resolve(req.result > 0);
+      req.onerror = () => resolve(false);
+    });
+  }
+
+  async function stats() {
+    const db = await open();
+    if (!db) {
+      let bytes = 0;
+      mem.forEach(b => { bytes += b.size || 0; });
+      return { count: mem.size, bytes };
+    }
+    return new Promise(resolve => {
+      const s = db.transaction(STORE, 'readonly').objectStore(STORE);
+      let count = 0, bytes = 0;
+      const cReq = s.count();
+      cReq.onsuccess = () => { count = cReq.result; };
+      const cur = s.openCursor();
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if (c) { bytes += (c.value.b && c.value.b.size) || 0; c.continue(); }
+        else resolve({ count, bytes });
+      };
+      cur.onerror = () => resolve({ count, bytes });
+    });
+  }
+
+  async function clear() {
+    mem.clear();
+    const db = await open();
+    if (!db) return;
+    await new Promise(resolve => {
+      const t = db.transaction(STORE, 'readwrite');
+      t.objectStore(STORE).clear();
+      t.oncomplete = () => resolve();
+      t.onerror = () => resolve();
+    });
+  }
+
+  async function evict() {
+    const db = await open();
+    if (!db) return;
+    const n = await new Promise(res => {
+      const r = db.transaction(STORE, 'readonly').objectStore(STORE).count();
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => res(0);
+    });
+    if (n <= MAX_TILES) return;
+    let left = n - MAX_TILES + 500;
+    await new Promise(resolve => {
+      const t = db.transaction(STORE, 'readwrite');
+      const cur = t.objectStore(STORE).index('t').openCursor();
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if (c && left > 0) { c.delete(); left--; c.continue(); }
+        else resolve();
+      };
+      cur.onerror = () => resolve();
+    });
+  }
+
+  return { get, put, has, stats, clear, evict, MAX_TILES };
+})();
+
+/* TileLayer yang baca dari cache dulu, baru ke internet. */
+function cachedLayer(template, opts) {
+  const Cached = L.TileLayer.extend({
+    createTile: function (coords, done) {
+      const tile = document.createElement('img');
+      tile.alt = '';
+      tile.setAttribute('role', 'presentation');
+      const url = this.getTileUrl(coords);
+      let settled = false;
+
+      const finish = err => {
+        if (settled) return;
+        settled = true;
+        if (tile.dataset.obj) {
+          URL.revokeObjectURL(tile.dataset.obj);
+          delete tile.dataset.obj;
+        }
+        done(err || null, tile);
+      };
+
+      tile.onload = () => finish(null);
+      tile.onerror = e => finish(e);
+
+      TileCache.get(url).then(blob => {
+        if (blob) {
+          tile.dataset.obj = URL.createObjectURL(blob);
+          tile.src = tile.dataset.obj;
+          return;
+        }
+        return fetch(url).then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.blob();
+        }).then(b => {
+          TileCache.put(url, b);
+          tile.dataset.obj = URL.createObjectURL(b);
+          tile.src = tile.dataset.obj;
+        });
+      }).catch(() => { tile.src = url; });
+
+      return tile;
+    }
+  });
+  return new Cached(template, opts);
+}
+
+/* Ganti layer sesuai mode peta. Tile lama dibuang, tile baru masuk tilePane
+   (di bawah overlay rute & marker). */
+let mapLayers = [];
+
+function applyMapMode(key) {
+  const mode = MAP_MODES[key] || MAP_MODES.dark;
+  mapLayers.forEach(l => { try { map.removeLayer(l); } catch (e) {} });
+  mapLayers = [];
+
+  const add = spec => {
+    const l = cachedLayer(spec.url, {
+      maxZoom: 19,
+      maxNativeZoom: spec.maxNative,
+      keepBuffer: 3
+    }).addTo(map);
+    mapLayers.push(l);
+  };
+
+  add(mode.base);
+  if (mode.ref) add(mode.ref);
+  if (mode.ref2) add(mode.ref2);
+
+  document.body.dataset.mapMode = key;
+  document.getElementById('credit').textContent = mode.credit;
+}
+
+applyMapMode(state.mapMode);
+
+const trail = [];
+const polyline = L.polyline(trail, {
+  color: '#ff5a5a', weight: 4, opacity: .85, lineJoin: 'round', lineCap: 'round'
+}).addTo(map);
+
+const marker = L.marker([state.lat, state.lon], {
+  icon: L.divIcon({
+    className: 'loc',
+    html: '<div class="pulse"></div><div class="dot"></div>',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  }),
+  interactive: false
+}).addTo(map);
+
+/* Geser titik lokasi ke kanan: center digeser sejauh `shift`% ke kiri. */
+function centerOn(latlng, zoom) {
+  const z = zoom || state.zoom;
+  const p = map.project(L.latLng(latlng), z);
+  const dx = Math.round(window.innerWidth * (state.shift / 100));
+  const center = map.unproject(p.subtract([dx, 0]), z);
+  map.setView(center, z, { animate: false });
+}
+
+let last = null;
+
+/* =====================================================================
+   PEMUTAR MUSIK (dock bawah)
+   ---------------------------------------------------------------------
+   Wrapper Android menyuntikkan:
+
+     window.HUMedia = {
+       state: function () { return JSON.stringify({title, artist, art, playing, pos, dur}); },
+       play:  function () {}, pause: function () {},
+       next:  function () {}, prev:  function () {},
+       seek:  function (ms) {}
+     };
+
+   lalu memanggil window.HUMediaUpdate(json) setiap status berubah.
+   Tanpa bridge (dibuka di browser), dock menampilkan contoh + progres palsu
+   supaya tata letaknya kelihatan.
+   ===================================================================== */
+const ART_PLACEHOLDER =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">' +
+  '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>';
+
+const DEMO_TRACKS = [
+  { title: 'Contoh: lagu pertama', artist: 'Demo · HUMedia belum aktif', pos: 48, dur: 214 },
+  { title: 'Contoh: lagu kedua', artist: 'Demo · HUMedia belum aktif', pos: 0, dur: 187 },
+  { title: 'Contoh: lagu ketiga', artist: 'Demo · HUMedia belum aktif', pos: 0, dur: 243 }
+];
+
+let media = {
+  title: DEMO_TRACKS[0].title, artist: DEMO_TRACKS[0].artist,
+  art: '', playing: false, pos: DEMO_TRACKS[0].pos, dur: DEMO_TRACKS[0].dur, demo: true
+};
+let demoTrack = 0;
+
+function hasMediaBridge() {
+  return !!(window.HUMedia && typeof window.HUMedia.state === 'function');
+}
+
+function renderPlayer() {
+  const el = document.getElementById('player');
+  if (!el) return;
+  document.getElementById('pTitle').textContent = media.title || 'Belum ada musik';
+  document.getElementById('pArtist').textContent = media.artist || 'Pemutar belum tersambung';
+
+  const art = document.getElementById('pArt');
+  art.innerHTML = media.art ? '<img src="' + media.art + '" alt="">' : ART_PLACEHOLDER;
+
+  document.getElementById('pPlayIcon').innerHTML = media.playing
+    ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+
+  const dur = media.dur || 0;
+  const pct = dur ? Math.min(100, media.pos / dur * 100) : 0;
+  document.getElementById('pFill').style.width = pct + '%';
+  el.title = media.demo ? 'Demo tampilan — di APK tersambung ke pemutar Android' : (media.title || '');
+}
+
+function syncMedia() {
+  if (!hasMediaBridge()) return false;
+  let s = null;
+  try { s = JSON.parse(window.HUMedia.state()); } catch (e) { return false; }
+
+  if (s && typeof s === 'object') {
+    media = Object.assign({ demo: false, art: '', playing: false, pos: 0, dur: 0 }, s);
+  } else {
+    /* bridge ada tapi belum ada sesi media (belum ada lagu / izin belum aktif) */
+    media = { title: '', artist: '', art: '', playing: false, pos: 0, dur: 0, demo: false };
+  }
+  renderPlayer();
+  return true;
+}
+
+/* dipanggil wrapper tiap status berubah (lebih hemat dari polling) */
+window.HUMediaUpdate = function (json) {
+  try {
+    const s = typeof json === 'string' ? JSON.parse(json) : json;
+    if (s && typeof s === 'object') {
+      media = Object.assign({ demo: false, art: '', playing: false, pos: 0, dur: 0 }, s);
+      renderPlayer();
+    }
+  } catch (e) {}
+};
+
+function mediaCmd(cmd, arg) {
+  if (!hasMediaBridge() || typeof window.HUMedia[cmd] !== 'function') return false;
+  try {
+    if (arg === undefined) window.HUMedia[cmd]();
+    else window.HUMedia[cmd](arg);
+    return true;
+  } catch (e) { return false; }
+}
+
+function demoStep(dir) {
+  demoTrack = (demoTrack + dir + DEMO_TRACKS.length) % DEMO_TRACKS.length;
+  const t = DEMO_TRACKS[demoTrack];
+  media = { title: t.title, artist: t.artist, art: '', playing: media.playing, pos: 0, dur: t.dur, demo: true };
+  renderPlayer();
+}
+
+setInterval(() => {
+  if (hasMediaBridge()) { syncMedia(); return; }
+  if (!media.demo) return;
+  if (media.playing) {
+    media.pos++;
+    if (media.pos >= media.dur) { demoStep(1); return; }
+  }
+  renderPlayer();
+}, 1000);
+
+document.getElementById('pPlay').addEventListener('click', () => {
+  if (mediaCmd(media.playing ? 'pause' : 'play')) { setTimeout(syncMedia, 150); return; }
+  if (media.demo) { media.playing = !media.playing; renderPlayer(); }
+});
+
+document.getElementById('pPrev').addEventListener('click', () => {
+  if (mediaCmd('prev')) { setTimeout(syncMedia, 150); return; }
+  if (media.demo) demoStep(-1);
+});
+
+document.getElementById('pNext').addEventListener('click', () => {
+  if (mediaCmd('next')) { setTimeout(syncMedia, 150); return; }
+  if (media.demo) demoStep(1);
+});
+
+document.getElementById('pBar').addEventListener('click', e => {
+  const r = e.currentTarget.getBoundingClientRect();
+  const ratio = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  if (mediaCmd('seek', Math.round(ratio * (media.dur || 0) * 1000))) { setTimeout(syncMedia, 150); return; }
+  if (media.demo && media.dur) { media.pos = Math.round(ratio * media.dur); renderPlayer(); }
+});
+
+/* =====================================================================
+   DOCK APLIKASI
+   ===================================================================== */
+const DEMO_DOCK = [
+  { pkg: '', label: 'Musik', ghost: true },
+  { pkg: '', label: 'Radio', ghost: true },
+  { pkg: '', label: 'Peta', ghost: true }
+];
+
+function dockItems() {
+  const apps = huAppsList();
+  if (!apps) return DEMO_DOCK;
+
+  const byPkg = {};
+  apps.forEach(a => { byPkg[a.pkg] = a; });
+
+  let pinned = (state.dockApps || []).map(p => byPkg[p]).filter(Boolean);
+  if (!pinned.length) pinned = apps.slice(0, 5);
+  return pinned.slice(0, 6);
+}
+
+function renderDock() {
+  const dock = document.getElementById('appDock');
+  if (!dock) return;
+
+  const items = dockItems();
+  dock.innerHTML = items.map(a => {
+    const initial = (a.label || '?').trim().charAt(0).toUpperCase();
+    const inner = a.icon
+      ? '<img src="' + a.icon + '" alt="">'
+      : '<span class="ini">' + initial + '</span>';
+    const title = a.ghost ? 'Contoh — aktif di APK' : (a.label || a.pkg);
+    return '<button class="dockBtn' + (a.ghost ? ' ghost' : '') + '"' +
+      (a.pkg ? ' data-pkg="' + a.pkg + '"' : '') +
+      ' title="' + title + '">' + inner + '</button>';
+  }).join('') +
+    '<button class="dockBtn all" id="btnAllApps" title="Semua aplikasi">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+    '<rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/>' +
+    '<rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>' +
+    '</svg></button>';
+}
+
+document.getElementById('appDock').addEventListener('click', e => {
+  if (e.target.closest('#btnAllApps')) {
+    renderApps();
+    document.getElementById('appsOverlay').classList.remove('hidden');
+    return;
+  }
+  const b = e.target.closest('button[data-pkg]');
+  if (!b) return;
+  const pkg = b.getAttribute('data-pkg');
+  if (pkg && window.HUApps && typeof window.HUApps.launch === 'function') {
+    window.HUApps.launch(pkg);
+  }
+});
+
+function dockChipHtml(a) {
+  const initial = (a.label || '?').trim().charAt(0).toUpperCase();
+  const inner = a.icon
+    ? '<img src="' + a.icon + '" alt="">'
+    : initial;
+  return '<span class="chip" title="' + (a.label || a.pkg) + '">' +
+    '<span class="box">' + inner + '</span>' +
+    '<span class="nm">' + (a.label || a.pkg) + '</span>' +
+    '<button class="rm" data-remove="' + a.pkg + '" title="Lepas">&times;</button>' +
+    '</span>';
+}
+
+function renderDockPick() {
+  const box = document.getElementById('dockPick');
+  if (!box) return;
+
+  const apps = huAppsList();
+  const btn = document.getElementById('dockPickBtn');
+
+  if (!apps) {
+    box.innerHTML = '<div class="none">Daftar aplikasi baru bisa diatur di APK (butuh jembatan <b>HUApps</b>). Di browser ini dock hanya menampilkan contoh.</div>';
+    if (btn) btn.disabled = true;
+    return;
+  }
+  if (btn) btn.disabled = false;
+
+  const byPkg = {};
+  apps.forEach(a => { byPkg[a.pkg] = a; });
+  const sel = (state.dockApps || []).map(p => byPkg[p]).filter(Boolean);
+
+  /* buang pkg yang sudah tidak terpasang (mis. app di-uninstall) */
+  if (apps.length && sel.length !== (state.dockApps || []).length) {
+    state.dockApps = sel.map(a => a.pkg);
+    saveState();
+  }
+
+  box.innerHTML = sel.length
+    ? sel.map(dockChipHtml).join('')
+    : '<div class="none">Belum ada yang dipilih — dock memakai 5 aplikasi pertama.</div>';
+
+  box.querySelectorAll('button[data-remove]').forEach(b => {
+    b.addEventListener('click', () => {
+      const pkg = b.getAttribute('data-remove');
+      state.dockApps = (state.dockApps || []).filter(p => p !== pkg);
+      saveState();
+      renderDock();
+      renderDockPick();
+      renderDockPickGrid();
+    });
+  });
+}
+
+/* Grid pilih aplikasi (di dialog terpisah, ada pencarian). */
+function renderDockPickGrid() {
+  const grid = document.getElementById('dockPickGrid');
+  if (!grid) return;
+
+  const apps = huAppsList();
+  const sel = state.dockApps || [];
+  const count = document.getElementById('dockCount');
+  if (count) count.textContent = sel.length + ' / 6 dipilih';
+
+  if (!apps) {
+    grid.innerHTML = '<div class="empty">Daftar aplikasi hanya tersedia di APK TerraDash.</div>';
+    return;
+  }
+
+  const inp = document.getElementById('dockSearch');
+  const q = (inp && inp.value ? inp.value : '').trim().toLowerCase();
+  const list = apps.filter(a =>
+    !q ||
+    (a.label || '').toLowerCase().indexOf(q) >= 0 ||
+    (a.pkg || '').toLowerCase().indexOf(q) >= 0);
+
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty">Tidak ada aplikasi yang cocok.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(a => {
+    const on = sel.indexOf(a.pkg) >= 0;
+    const initial = (a.label || '?').trim().charAt(0).toUpperCase();
+    const inner = a.icon ? '<img src="' + a.icon + '" alt="">' : initial;
+    return '<div class="app' + (on ? ' on' : '') + '" data-pick="' + a.pkg + '" title="' + (a.label || a.pkg) + '">' +
+      '<div class="box">' + inner + '</div>' +
+      '<div class="nm">' + (a.label || a.pkg) + '</div></div>';
+  }).join('');
+
+  grid.querySelectorAll('[data-pick]').forEach(el => {
+    el.addEventListener('click', () => {
+      const pkg = el.getAttribute('data-pick');
+      let arr = (state.dockApps || []).slice();
+      const i = arr.indexOf(pkg);
+      if (i >= 0) {
+        arr.splice(i, 1);
+      } else {
+        if (arr.length >= 6) {
+          if (count) count.textContent = 'Maksimal 6 — lepas dulu salah satu';
+          return;
+        }
+        arr.push(pkg);
+      }
+      state.dockApps = arr;
+      saveState();
+      renderDock();
+      renderDockPick();
+      renderDockPickGrid();
+    });
+  });
+}
+
+document.getElementById('dockPickBtn').addEventListener('click', () => {
+  document.getElementById('dockPickOverlay').classList.remove('hidden');
+  const inp = document.getElementById('dockSearch');
+  if (inp) inp.value = '';
+  renderDockPickGrid();
+});
+
+document.getElementById('dockSearch').addEventListener('input', renderDockPickGrid);
+
+
+/* =====================================================================
+   PENCARIAN TUJUAN + RUTE
+   Photon (pencarian, tanpa key) + OSRM demo (rute, tanpa key).
+   ===================================================================== */
+const PHOTON_API = 'https://photon.komoot.io/api/';
+const NOMINATIM_API = 'https://nominatim.openstreetmap.org/search';
+const OSRM_API = 'https://router.project-osrm.org/route/v1/driving/';
+
+let routeLine = null;
+let routeCase = null;
+let routeEnd = null;
+let route = null;
+let routeBusy = false;
+let routeAt = 0;
+let destPick = null;
+let suggTimer = null;
+let suggSeq = 0;
+
+const destInput = document.getElementById('destInput');
+const suggBox = document.getElementById('sugg');
+const searchBox = document.getElementById('searchBox');
+const routeCard = document.getElementById('routeCard');
+
+function fmtKm(m) {
+  return m >= 1000 ? (m / 1000).toFixed(1).replace('.', ',') : Math.round(m) + ' m';
+}
+function fmtMnt(sec) {
+  const m = Math.max(1, Math.round(sec / 60));
+  return m >= 60 ? Math.floor(m / 60) + ' j ' + (m % 60) : String(m);
+}
+function fmtJam(d) {
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+function hideSugg() {
+  suggBox.classList.add('hidden');
+  suggBox.innerHTML = '';
+}
+function showSugg(html) {
+  suggBox.innerHTML = html;
+  suggBox.classList.remove('hidden');
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/* Perbaiki teks yang terlanjur "mojibake" (UTF-8 dibaca sebagai Windows-1252).
+   Contoh: urutan \u00e2\u20ac\u2122 -> apostrof miring (U+2019).
+   Sebagian data OSM memang mengandung teks rusak seperti ini. */
+const CP1252_BYTE = {
+  '\u20AC': 0x80, '\u201A': 0x82, '\u0192': 0x83, '\u201E': 0x84, '\u2026': 0x85,
+  '\u2020': 0x86, '\u2021': 0x87, '\u02C6': 0x88, '\u2030': 0x89, '\u0160': 0x8A,
+  '\u2039': 0x8B, '\u0152': 0x8C, '\u017D': 0x8E, '\u2018': 0x91, '\u2019': 0x92,
+  '\u201C': 0x93, '\u201D': 0x94, '\u2022': 0x95, '\u2013': 0x96, '\u2014': 0x97,
+  '\u02DC': 0x98, '\u2122': 0x99, '\u0161': 0x9A, '\u203A': 0x9B, '\u0153': 0x9C,
+  '\u017E': 0x9E, '\u0178': 0x9F
+};
+
+/* Ciri teks mojibake: huruf pembawa (A-tilde, A-circumflex, a-circumflex)
+   diikuti karakter khas cp1252. */
+const MOJI_RE = /[\u00C2\u00C3\u00E2][\u0080-\u00FF\u0152\u0153\u0160\u0161\u0178\u017D\u017E\u0192\u02C6\u02DC\u2013\u2014\u2018\u2019\u201A\u201C\u201D\u201E\u2020\u2021\u2022\u2026\u2030\u2039\u203A\u20AC\u2122]/;
+
+function fixText(s) {
+  if (s == null) return s;
+  let cur = String(s);
+  if (!MOJI_RE.test(cur)) return cur;
+  for (let pass = 0; pass < 3; pass++) {
+    if (!MOJI_RE.test(cur)) break;
+    if (cur.length > 400) break;
+    const bytes = new Uint8Array(cur.length);
+    let ok = true;
+    for (let i = 0; i < cur.length; i++) {
+      const ch = cur.charAt(i);
+      const c = cur.charCodeAt(i);
+      if (CP1252_BYTE[ch] != null) bytes[i] = CP1252_BYTE[ch];
+      else if (c <= 255) bytes[i] = c;
+      else { ok = false; break; }
+    }
+    if (!ok) break;
+    let dec;
+    try {
+      dec = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch (e) {
+      break;
+    }
+    if (dec === cur) break;
+    cur = dec;
+  }
+  return cur;
+}
+
+/* Esri World Geocoding: kuat untuk alamat, lemah untuk POI Indonesia.
+   Hasilnya digabung dengan Photon + Nominatim di searchDest(). */
+async function geocodeEsri(q, ll) {
+  const url = 'https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates' +
+    '?f=json&singleLine=' + encodeURIComponent(q) +
+    '&maxLocations=6&forStorage=false&location=' + ll[1] + ',' + ll[0] +
+    '&outFields=LongLabel,PlaceName,Addr_type';
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  return (j.candidates || [])
+    .filter(c => c.location && (c.score == null || c.score >= 50))
+    .map(c => {
+      const a = c.attributes || {};
+      const main = c.address || a.PlaceName || 'Tujuan';
+      let sub = a.LongLabel || '';
+      if (sub.toLowerCase().indexOf(main.toLowerCase()) === 0) {
+        sub = sub.slice(main.length).replace(/^[,\s]+/, '');
+      }
+      return { lat: c.location.y, lon: c.location.x, main: fixText(main), sub: fixText(sub), src: 'esri' };
+    });
+}
+
+async function geocodePhoton(q, ll) {
+  const url = PHOTON_API + '?q=' + encodeURIComponent(q) + '&limit=8&lat=' + ll[0] + '&lon=' + ll[1];
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  return (j.features || [])
+    .filter(f => f.geometry && f.geometry.type === 'Point')
+    .map(f => {
+      const p = f.properties || {};
+      const c = f.geometry.coordinates;
+      const main = p.name || p.street || p.city || p.county || 'Tujuan';
+      const sub = [p.city, p.state, p.country]
+        .filter(x => x && x !== main)
+        .filter((x, i, a) => a.indexOf(x) === i)
+        .join(', ');
+      return { lat: c[1], lon: c[0], main: fixText(main), sub: fixText(sub), src: 'photon' };
+    });
+}
+
+/* Nominatim (OSM): paling lengkap untuk POI yang tidak ada di World Geocoding
+   Esri — kampus, masjid, kantor, rumah sakit, minimarket. Sopan: 1 req/detik. */
+let nomLast = 0;
+async function geocodeNominatim(q, ll) {
+  const wait = 1100 - (Date.now() - nomLast);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  nomLast = Date.now();
+
+  const url = NOMINATIM_API + '?format=jsonv2&addressdetails=1&limit=8' +
+    '&accept-language=id&countrycodes=id&q=' + encodeURIComponent(q) +
+    '&lat=' + ll[0] + '&lon=' + ll[1];
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+
+  return (Array.isArray(j) ? j : []).map(x => {
+    const a = x.address || {};
+    const main = x.name || String(x.display_name || '').split(',')[0] || 'Tujuan';
+    const sub = [a.suburb || a.village || a.city_district, a.city || a.town || a.county, a.state]
+      .filter(s => s && s.toLowerCase() !== main.toLowerCase())
+      .filter((s, i, arr) => arr.indexOf(s) === i)
+      .join(', ');
+    return { lat: parseFloat(x.lat), lon: parseFloat(x.lon), main: fixText(main), sub: fixText(sub), src: 'osm' };
+  }).filter(it => isFinite(it.lat) && isFinite(it.lon));
+}
+
+function normTxt(s) {
+  return String(s || '').toLowerCase()
+    .replace(/[^a-z0-9\u00c0-\u024f ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/* Skor: cocok kata kunci dulu, lalu jarak dari posisi mobil.
+   Tanpa ini, "Kampus C" di Palembang bisa mengalahkan hasil yang benar. */
+function rankPlace(q, it, ll) {
+  const tokens = normTxt(q).split(' ').filter(Boolean);
+  const hay = normTxt(it.main + ' ' + it.sub);
+  let hit = 0;
+  tokens.forEach(t => { if (hay.indexOf(t) >= 0) hit++; });
+  let s = tokens.length ? (hit / tokens.length) * 100 : 50;
+  if (it.main && normTxt(it.main) === normTxt(q)) s += 25;
+  if (it.main && normTxt(it.main).indexOf(normTxt(q)) === 0) s += 10;
+
+  let d = 0;
+  try { d = map.distance(ll, [it.lat, it.lon]) / 1000; } catch (e) { d = 0; }
+  s -= Math.min(d, 5000) / 12;
+
+  if (it.src === 'osm') s += 5;      // POI OSM paling kaya
+  else if (it.src === 'photon') s += 3;
+  return s;
+}
+
+/* Buang duplikat: nama sama dan jarak < 200 m (Nominatim & Photon sering
+   mengembalikan objek OSM yang sama). */
+function dedupePlaces(items) {
+  const out = [];
+  items.forEach(it => {
+    const dup = out.some(o => {
+      if (normTxt(o.main) !== normTxt(it.main)) return false;
+      try { return map.distance([o.lat, o.lon], [it.lat, it.lon]) < 200; } catch (e) { return false; }
+    });
+    if (!dup) out.push(it);
+  });
+  return out;
+}
+
+async function searchDest(q) {
+  const seq = ++suggSeq;
+  const ll = currentLatLon();
+
+  const jobs = [geocodeEsri(q, ll), geocodePhoton(q, ll), geocodeNominatim(q, ll)];
+  const settled = await Promise.all(jobs.map(p => p.then(v => v || []).catch(() => [])));
+  if (seq !== suggSeq) return;
+
+  let items = [];
+  settled.forEach(arr => { items = items.concat(arr); });
+  items = dedupePlaces(items);
+  items.sort((a, b) => rankPlace(q, b, ll) - rankPlace(q, a, ll));
+
+  /* Kalau sudah ada hasil dekat (<150 km), buang hasil yang jelas beda pulau
+     / benua supaya daftar tidak penuh tempat yang tidak relevan. */
+  const distKm = it => {
+    try { return map.distance(ll, [it.lat, it.lon]) / 1000; } catch (e) { return 0; }
+  };
+  if (items.length) {
+    const nearest = Math.min.apply(null, items.map(distKm));
+    if (nearest < 150) items = items.filter(it => distKm(it) < 300);
+  }
+
+  items = items.slice(0, 8);
+
+  if (!items.length) {
+    showSugg('<div class="msg">Tidak ada hasil. Coba nama tempat yang lebih umum (mis. “Universitas Airlangga Surabaya”).</div>');
+    return;
+  }
+
+  showSugg(items.map(it => {
+    const label = it.main + (it.sub ? ', ' + it.sub : '');
+    return '<button data-lat="' + it.lat + '" data-lon="' + it.lon +
+      '" data-label="' + esc(label) + '">' + esc(it.main) +
+      (it.sub ? '<span class="s2">' + esc(it.sub) + '</span>' : '') + '</button>';
+  }).join(''));
+}
+
+destInput.addEventListener('input', () => {
+  const q = destInput.value.trim();
+  searchBox.classList.toggle('has', q.length > 0);
+  clearTimeout(suggTimer);
+  if (q.length < 3) { hideSugg(); return; }
+  suggTimer = setTimeout(() => searchDest(q), 400);
+});
+
+suggBox.addEventListener('click', e => {
+  const b = e.target.closest('button[data-lat]');
+  if (!b) return;
+  destPick = {
+    lat: parseFloat(b.getAttribute('data-lat')),
+    lon: parseFloat(b.getAttribute('data-lon')),
+    label: b.getAttribute('data-label')
+  };
+  destInput.value = destPick.label.split(',')[0];
+  searchBox.classList.add('has');
+  hideSugg();
+  destInput.blur();
+  computeRoute();
+});
+
+document.getElementById('destClear').addEventListener('click', () => {
+  destInput.value = '';
+  searchBox.classList.remove('has');
+  hideSugg();
+  clearRoute();
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.searchWrap')) hideSugg();
+});
+
+function setRouteCardMsg(msg, arrow) {
+  routeCard.classList.add('on');
+  document.getElementById('rcArrow').textContent = arrow || '…';
+  document.getElementById('rcInstr').textContent = msg;
+  document.getElementById('rcSub').textContent = '';
+  document.getElementById('rcKm').textContent = '—';
+  document.getElementById('rcMin').textContent = '—';
+  document.getElementById('rcEta').textContent = '—';
+  document.getElementById('rcBar').style.width = '0%';
+}
+
+function clearRouteLayers() {
+  [routeCase, routeLine, routeEnd].forEach(l => {
+    if (l) { try { map.removeLayer(l); } catch (e) {} }
+  });
+  routeCase = routeLine = routeEnd = null;
+}
+
+function clearRoute() {
+  clearRouteLayers();
+  route = null;
+  destPick = null;
+  routeCard.classList.remove('on');
+}
+
+async function computeRoute() {
+  if (!destPick || routeBusy) return;
+
+  const from = currentLatLon();
+  routeBusy = true;
+  setRouteCardMsg('Menghitung rute…');
+
+  try {
+    const url = OSRM_API + from[1] + ',' + from[0] + ';' + destPick.lon + ',' + destPick.lat +
+      '?overview=full&geometries=geojson&steps=true&alternatives=false';
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (!j.routes || !j.routes.length) throw new Error(j.message || 'Rute tidak ditemukan');
+
+    const rt = j.routes[0];
+    const coords = rt.geometry.coordinates.map(c => [c[1], c[0]]);
+    const cum = [0];
+    for (let i = 1; i < coords.length; i++) {
+      cum.push(cum[i - 1] + map.distance(coords[i - 1], coords[i]));
+    }
+
+    route = {
+      coords, cum,
+      dist: rt.distance, dur: rt.duration,
+      steps: (rt.legs && rt.legs[0] && rt.legs[0].steps) || [],
+      from, to: destPick
+    };
+    routeAt = Date.now();
+    drawRoute();
+    updateRouteCard();
+  } catch (e) {
+    setRouteCardMsg('Gagal menghitung rute. Cek sinyal, lalu coba lagi.', '!');
+  } finally {
+    routeBusy = false;
+  }
+}
+
+function drawRoute() {
+  clearRouteLayers();
+  if (!route) return;
+
+  routeCase = L.polyline(route.coords, {
+    color: '#04121f', weight: 11, opacity: .55, lineJoin: 'round', lineCap: 'round'
+  }).addTo(map);
+
+  routeLine = L.polyline(route.coords, {
+    color: state.accent, weight: 6, opacity: .95, lineJoin: 'round', lineCap: 'round'
+  }).addTo(map);
+
+  routeEnd = L.marker([route.to.lat, route.to.lon], {
+    icon: L.divIcon({
+      className: 'destpin',
+      html: '<div class="dpin"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    }),
+    interactive: false
+  }).addTo(map);
+
+  map.fitBounds(L.latLngBounds(route.coords), {
+    paddingTopLeft: [50, 110],
+    paddingBottomRight: [50, 200],
+    animate: false,
+    maxZoom: 17
+  });
+  routeCard.classList.add('on');
+}
+
+function stepIndexAt(along) {
+  if (!route || !route.steps.length) return -1;
+  if (!route._steps) {
+    let acc = 0;
+    route._steps = route.steps.map(s => {
+      acc += s.distance || 0;
+      return { step: s, end: acc };
+    });
+  }
+  for (let i = 0; i < route._steps.length; i++) {
+    if (along < route._steps[i].end) return i;
+  }
+  return route._steps.length - 1;
+}
+
+const TURN_WORDS = {
+  depart: 'Mulai', arrive: 'Tiba di', turn: 'Belok', continue: 'Lurus',
+  'new name': 'Lurus', merge: 'Gabung', fork: 'Ambil', roundabout: 'Masuk bundaran',
+  rotary: 'Masuk bundaran', 'end of road': 'Belok', 'on ramp': 'Masuk', 'off ramp': 'Keluar'
+};
+const MOD_WORDS = {
+  left: 'kiri', right: 'kanan', 'slight left': 'agak kiri', 'slight right': 'agak kanan',
+  'sharp left': 'tajam kiri', 'sharp right': 'tajam kanan', straight: 'lurus', uturn: 'putar balik'
+};
+
+function turnText(step) {
+  const m = step.maneuver || {};
+  if (m.type === 'arrive') return 'Tiba di';
+  if (m.type === 'depart') return 'Mulai dari';
+  if (m.type === 'roundabout' || m.type === 'rotary') return 'Masuk bundaran, keluar ke';
+  const w = TURN_WORDS[m.type] || 'Lanjut';
+  const mod = MOD_WORDS[m.modifier] || '';
+  return w + (mod ? ' ' + mod : '') + ' ke';
+}
+
+function turnGlyph(m) {
+  m = m || {};
+  if (m.type === 'arrive') return '⚑';
+  if (m.type === 'roundabout' || m.type === 'rotary') return '↻';
+  if (m.type === 'merge') return '⤳';
+  const mod = m.modifier || '';
+  if (mod.indexOf('uturn') >= 0) return '⤺';
+  if (mod.indexOf('sharp left') >= 0) return '↰';
+  if (mod.indexOf('sharp right') >= 0) return '↱';
+  if (mod.indexOf('slight left') >= 0) return '↖';
+  if (mod.indexOf('slight right') >= 0) return '↗';
+  if (mod.indexOf('left') >= 0) return '←';
+  if (mod.indexOf('right') >= 0) return '→';
+  return '↑';
+}
+
+function nearestOnRoute(ll) {
+  if (!route) return null;
+  let best = Infinity, bi = 0;
+  for (let i = 0; i < route.coords.length; i++) {
+    const d = map.distance(ll, route.coords[i]);
+    if (d < best) { best = d; bi = i; }
+  }
+  return { idx: bi, off: best, along: route.cum[bi] };
+}
+
+function updateRouteCard() {
+  if (!route) return;
+
+  const near = nearestOnRoute(currentLatLon());
+  const total = route.dist || 1;
+  const along = Math.min(near.along, total);
+  const left = Math.max(0, total - along);
+  const durLeft = route.dur * (left / total);
+
+  document.getElementById('rcKm').textContent = fmtKm(left);
+  document.getElementById('rcMin').textContent = fmtMnt(durLeft);
+  document.getElementById('rcEta').textContent = fmtJam(new Date(Date.now() + durLeft * 1000));
+  document.getElementById('rcBar').style.width = Math.min(100, along / total * 100) + '%';
+
+  const i = stepIndexAt(along);
+  const next = i >= 0 ? route.steps[i + 1] : null;
+
+  if (next) {
+    document.getElementById('rcArrow').textContent = turnGlyph(next.maneuver);
+    document.getElementById('rcInstr').innerHTML = turnText(next) +
+      (next.name ? ' <b>' + esc(fixText(next.name)) + '</b>' : '');
+    const toTurn = Math.max(0, route._steps[i].end - along);
+    document.getElementById('rcSub').textContent =
+      toTurn > 20 ? fmtKm(toTurn) + ' lagi' : 'sekarang';
+  } else {
+    document.getElementById('rcArrow').textContent = '⚑';
+    document.getElementById('rcInstr').textContent = 'Menuju ' + fixText(route.to.label.split(',')[0]);
+    document.getElementById('rcSub').textContent = fmtKm(left) + ' lagi';
+  }
+
+  /* keluar jalur cukup jauh -> hitung ulang (maks tiap 20 detik) */
+  if (near.off > 100 && Date.now() - routeAt > 20000 && !routeBusy) {
+    routeAt = Date.now();
+    computeRoute();
+  }
+}
+
+document.getElementById('rcClose').addEventListener('click', clearRoute);
+
+/* =====================================================================
+   FULLSCREEN BERSIH
+   ===================================================================== */
+function setClean(on) {
+  document.body.classList.toggle('clean', !!on);
+  try {
+    if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else if (!on && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  } catch (e) {}
+  setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 280);
+}
+
+document.getElementById('btnFull').addEventListener('click', () => setClean(true));
+document.getElementById('btnExitFull').addEventListener('click', () => setClean(false));
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) document.body.classList.remove('clean');
+});
+
+/* =====================================================================
+   CUACA
+   ===================================================================== */
+const ICONS = {
+  sun: '<svg class="wicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>',
+  partly: '<svg class="wicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8.5" cy="9" r="3.2"/><path d="M8.5 3.4v1.4M3 9H1.6M4.6 5.1l1 1M13.3 5.1l-1 1"/><path d="M9 18h8a3.2 3.2 0 0 0 .3-6.4A4.6 4.6 0 0 0 8.6 13 2.7 2.7 0 0 0 9 18z"/></svg>',
+  cloud: '<svg class="wicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 18h9.5a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.4 12.4 2.8 2.8 0 0 0 7 18z"/></svg>',
+  rain: '<svg class="wicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 15h9.5a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.4 9.4 2.8 2.8 0 0 0 7 15z"/><path d="M8 18.5l-.8 2M12 18.5l-.8 2M16 18.5l-.8 2"/></svg>',
+  storm: '<svg class="wicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 14h9.5a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.4 8.4 2.8 2.8 0 0 0 7 14z"/><path d="M12 15l-1.6 3h2.4L11.4 22"/></svg>',
+  fog: '<svg class="wicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9h16M3 13h18M5 17h14"/></svg>',
+  snow: '<svg class="wicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/></svg>'
+};
+
+function iconFor(code, isDay) {
+  if (code === 0) return isDay === 0 ? ICONS.cloud : ICONS.sun;
+  if (code <= 3) return ICONS.partly;
+  if (code === 45 || code === 48) return ICONS.fog;
+  if (code >= 51 && code <= 67) return ICONS.rain;
+  if (code >= 71 && code <= 77) return ICONS.snow;
+  if (code >= 80 && code <= 82) return ICONS.rain;
+  if (code >= 95) return ICONS.storm;
+  return ICONS.cloud;
+}
+
+let weatherAt = 0;
+let weatherPos = null;
+let weatherFailAt = 0;
+let weatherTries = 0;
+let weatherTimer = null;
+
+async function refreshWeather(lat, lon, force) {
+  const moved = weatherPos ? map.distance(weatherPos, [lat, lon]) : Infinity;
+  const retry = weatherFailAt && Date.now() - weatherFailAt > 2 * 60 * 1000;
+  if (!force && !retry && weatherPos && moved < 2000 && Date.now() - weatherAt < 10 * 60 * 1000) return;
+  weatherAt = Date.now();
+  weatherPos = [lat, lon];
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
+      '&longitude=' + lon + '&current=temperature_2m,weather_code,is_day&timezone=auto';
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const c = j.current || {};
+    if (typeof c.temperature_2m !== 'number') throw new Error('data kosong');
+    document.getElementById('temp').innerHTML = Math.round(c.temperature_2m) + '&deg;';
+    document.getElementById('wicon').innerHTML = iconFor(c.weather_code, c.is_day);
+    weatherFailAt = 0;
+    weatherTries = 0;
+    if (weatherTimer) { clearTimeout(weatherTimer); weatherTimer = null; }
+  } catch (e) {
+    /* offline / sinyal belum siap: biarkan suhu terakhir tampil, coba lagi
+       cepat di awal (15s, 30s, 60s, 120s) supaya tidak "—°" lama */
+    weatherFailAt = Date.now();
+    if (weatherTries < 4) {
+      const delay = [15000, 30000, 60000, 120000][weatherTries];
+      weatherTries++;
+      if (weatherTimer) clearTimeout(weatherTimer);
+      weatherTimer = setTimeout(() => {
+        weatherTimer = null;
+        refreshWeather(lat, lon, true);
+      }, delay);
+    }
+  }
+}
+
+/* =====================================================================
+   WAKTU SHOLAT
+   ===================================================================== */
+const PRAYERS = [
+  { key: 'Fajr', label: 'Subuh' },
+  { key: 'Dhuhr', label: 'Dzuhur' },
+  { key: 'Asr', label: 'Ashar' },
+  { key: 'Maghrib', label: 'Maghrib' },
+  { key: 'Isha', label: 'Isya' }
+];
+let prayerAt = 0;
+let prayerPos = null;
+let prayerDate = '';
+let prayerCache = null;
+let prayerFailAt = 0;
+
+const minutesOf = hhmm => {
+  const p = hhmm.split(':');
+  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+};
+
+function todayStr() {
+  const d = new Date();
+  return pad2(d.getDate()) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear();
+}
+
+/* Lebar pemutar musik disamakan dengan lebar baris jadwal sholat, supaya
+   tepi kanannya sejajar dan judul lagu tidak kepotong. */
+function syncPlayerWidth() {
+  const p = document.getElementById('player');
+  const pr = document.getElementById('prayers');
+  if (!p) return;
+
+  const kids = pr ? pr.children : null;
+  const hidden = !pr || !kids.length || getComputedStyle(pr).display === 'none';
+  if (hidden) { p.style.width = ''; return; }
+
+  const first = kids[0].getBoundingClientRect();
+  const last = kids[kids.length - 1].getBoundingClientRect();
+  const w = Math.round(last.right - first.left);
+  const max = Math.round(window.innerWidth * 0.5);
+  if (w < 160) { p.style.width = ''; return; }
+  p.style.width = Math.min(w, max) + 'px';
+}
+
+function renderPrayers(timings) {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  let nextKey = null;
+  for (const p of PRAYERS) {
+    const t = (timings[p.key] || '').split(' ')[0];
+    if (t && minutesOf(t) > nowMin) { nextKey = p.key; break; }
+  }
+  if (!nextKey) nextKey = 'Fajr';
+
+  document.getElementById('prayers').innerHTML = PRAYERS.map(p => {
+    const t = (timings[p.key] || '--:--').split(' ')[0];
+    return '<div class="prayer ' + (p.key === nextKey ? 'next' : '') + '">' +
+      '<div class="nm">' + p.label + '</div><div class="tm">' + t + '</div></div>';
+  }).join('');
+
+  syncPlayerWidth();
+}
+
+async function refreshPrayers(lat, lon, force) {
+  const date = todayStr();
+  const moved = prayerPos ? map.distance(prayerPos, [lat, lon]) : Infinity;
+  const retry = prayerFailAt && Date.now() - prayerFailAt > 5 * 60 * 1000;
+  const stillFresh = prayerCache && prayerDate === date &&
+    Date.now() - prayerAt < 6 * 60 * 60 * 1000 && moved < 15000;
+
+  if (!force && !retry && stillFresh) { renderPrayers(prayerCache); return; }
+
+  prayerAt = Date.now();
+  prayerPos = [lat, lon];
+  try {
+    const url = 'https://api.aladhan.com/v1/timings/' + date +
+      '?latitude=' + lat + '&longitude=' + lon + '&method=' + state.prayerMethod;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    prayerCache = j.data.timings;
+    prayerDate = date;
+    prayerFailAt = 0;
+    try {
+      localStorage.setItem(PRAYER_KEY, JSON.stringify({ date, lat, lon, timings: prayerCache }));
+    } catch (e) {}
+    renderPrayers(prayerCache);
+  } catch (e) {
+    prayerFailAt = Date.now();
+    /* offline: pakai jadwal yang tersimpan kalau masih hari yang sama */
+    try {
+      const c = JSON.parse(localStorage.getItem(PRAYER_KEY) || 'null');
+      if (c && c.date === date && c.timings) {
+        prayerCache = c.timings;
+        prayerDate = date;
+        renderPrayers(c.timings);
+      }
+    } catch (e2) {}
+  }
+}
+
+/* =====================================================================
+   LOKASI & KECEPATAN
+   ===================================================================== */
+let watchId = null;
+let placeAt = 0;
+let placePos = null;
+let placeLabel = '';
+let placeFailAt = 0;
+let lastFix = null;
+
+function currentLatLon() {
+  return last ? last : [state.lat, state.lon];
+}
+
+function setPlace(label) {
+  placeLabel = label;
+  const el = document.getElementById('place');
+  el.textContent = fixText(label);
+  el.classList.toggle('live', !!state.followGps);
+}
+
+/* Ambil nama kecamatan/kabupaten dari koordinat (BigDataCloud, tanpa API key). */
+function labelFromGeo(j) {
+  const adm = (j.localityInfo && j.localityInfo.administrative) || [];
+  const lvl = n => {
+    const hit = adm.find(a => a.adminLevel === n);
+    return hit ? hit.name : '';
+  };
+  const district = lvl(6) || j.locality || '';
+  const regency = lvl(5) || j.city || '';
+  const province = lvl(4) || '';
+
+  if (district && regency && district !== regency) return district + ', ' + regency;
+  if (regency && province) return regency + ', ' + province;
+  return regency || province || j.city || 'Lokasi';
+}
+
+async function refreshPlace(lat, lon, force) {
+  const moved = placePos ? map.distance(placePos, [lat, lon]) : Infinity;
+  const retry = placeFailAt && Date.now() - placeFailAt > 2 * 60 * 1000;
+  if (!force && !retry && placePos && moved < 3000 && Date.now() - placeAt < 15 * 60 * 1000) return;
+
+  placeAt = Date.now();
+  placePos = [lat, lon];
+  try {
+    const url = 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat +
+      '&longitude=' + lon + '&localityLanguage=id';
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const label = labelFromGeo(j);
+    if (!label) return;
+    setPlace(label);
+    placeFailAt = 0;
+    try { localStorage.setItem(PLACE_KEY, JSON.stringify({ label, lat, lon })); } catch (e) {}
+  } catch (e) {
+    /* offline: biarkan label terakhir, coba lagi 2 menit lagi */
+    placeFailAt = Date.now();
+  }
+}
+
+function onPosition(pos) {
+  const lat = pos.coords.latitude;
+  const lon = pos.coords.longitude;
+
+  let mps = pos.coords.speed;
+  if ((mps == null || isNaN(mps)) && lastFix) {
+    const dt = (pos.timestamp - lastFix.t) / 1000;
+    if (dt > 0.5) mps = map.distance([lastFix.lat, lastFix.lon], [lat, lon]) / dt;
+  }
+  const kmh = mps == null || isNaN(mps) ? 0 : Math.max(0, mps * 3.6);
+  document.getElementById('speed').textContent = Math.round(kmh);
+
+  marker.setLatLng([lat, lon]);
+
+  if (state.followGps) {
+    if (!last || map.distance(last, [lat, lon]) > 3) centerOn([lat, lon], state.zoom);
+  }
+
+  if (!last || map.distance(last, [lat, lon]) > 2) {
+    trail.push([lat, lon]);
+    if (trail.length > 400) trail.shift();
+    polyline.setLatLngs(trail);
+  }
+
+  last = [lat, lon];
+  lastFix = { lat, lon, t: pos.timestamp };
+
+  if (route) updateRouteCard();
+
+  if (state.followGps) {
+    refreshPlace(lat, lon);
+    refreshWeather(lat, lon);
+    refreshPrayers(lat, lon);
+  }
+}
+
+function startGeo() {
+  if (watchId !== null || !navigator.geolocation) return;
+  watchId = navigator.geolocation.watchPosition(onPosition, function () {
+    /* GPS tidak tersedia: tetap pakai kota manual */
+  }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+}
+
+function stopGeo() {
+  if (watchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+}
+
+/* =====================================================================
+   SETTINGS UI
+   ===================================================================== */
+const ACCENTS = ['#f5a524', '#3ddc97', '#4ea1ff', '#ff5a5a', '#e8eef6'];
+
+const CLOCK_FONTS = {
+  system:   { family: '"Segoe UI", Roboto, system-ui, sans-serif', weight: 600, track: '-2.5px' },
+  orbitron: { family: "'Orbitron', 'Segoe UI', sans-serif", weight: 700, track: '.5px' },
+  chakra:   { family: "'Chakra Petch', 'Segoe UI', sans-serif", weight: 600, track: '0px' },
+  rajdhani: { family: "'Rajdhani', 'Segoe UI', sans-serif", weight: 600, track: '.5px' }
+};
+
+function markActive(containerId, attr, value) {
+  document.querySelectorAll('#' + containerId + ' button').forEach(b => {
+    b.classList.toggle('active', b.getAttribute(attr) === value);
+  });
+}
+
+function applyClock() {
+  const f = CLOCK_FONTS[state.clockFont] || CLOCK_FONTS.system;
+  const root = document.documentElement.style;
+  root.setProperty('--clock-font', f.family);
+  root.setProperty('--clock-weight', String(f.weight));
+  root.setProperty('--clock-track', f.track);
+  root.setProperty('--clock-scale', String(state.clockScale / 100));
+
+  const el = document.getElementById('clockSizeVal');
+  if (el) el.textContent = state.clockScale + '%';
+}
+
+function buildSettings() {
+  const sw = document.getElementById('swatches');
+  sw.innerHTML = ACCENTS.map(c =>
+    '<button class="swatch ' + (c === state.accent ? 'active' : '') + '" data-c="' + c + '" style="background:' + c + '"></button>'
+  ).join('');
+
+  const sel = document.getElementById('citySel');
+  sel.innerHTML = CITIES.map(c =>
+    '<option value="' + c.name + '" ' + (c.name === state.city ? 'selected' : '') + '>' + c.name + '</option>'
+  ).join('');
+
+  document.getElementById('shift').value = state.shift;
+  document.getElementById('shiftVal').textContent = state.shift + '%';
+  document.getElementById('zoom').value = state.zoom;
+  document.getElementById('zoomVal').textContent = state.zoom;
+  document.getElementById('clockSize').value = state.clockScale;
+  document.getElementById('followGps').checked = state.followGps;
+  document.getElementById('showSpeed').checked = state.showSpeed;
+  document.getElementById('showWeather').checked = state.showWeather;
+  document.getElementById('showPrayers').checked = state.showPrayers;
+  document.getElementById('showPlayer').checked = state.showPlayer;
+  document.getElementById('h24').checked = state.h24;
+
+  markActive('mapModePick', 'data-mode', state.mapMode);
+  markActive('fontPick', 'data-font', state.clockFont);
+  applyClock();
+  renderDockPick();
+  refreshBridgeButtons();
+
+  const hint = document.getElementById('mapModeHint');
+  if (hint) {
+    const mm = MAP_MODES[state.mapMode] || MAP_MODES.dark;
+    hint.textContent = state.mapMode === 'satellite'
+      ? 'Citra satelit + jalan & nama tempat. Detail sampai zoom 18.'
+      : 'Detail asli sampai zoom ' + mm.base.maxNative + '; di atas itu tile diperbesar.';
+  }
+
+  refreshCacheInfo();
+  updateOfflineEstimate();
+}
+
+function applyVisual() {
+  document.documentElement.style.setProperty('--accent', state.accent);
+  document.getElementById('speedBlock').style.display = state.showSpeed ? '' : 'none';
+  document.getElementById('weatherBlock').style.display = state.showWeather ? '' : 'none';
+  document.getElementById('prayers').style.display = state.showPrayers ? '' : 'none';
+  document.getElementById('player').style.display = state.showPlayer ? '' : 'none';
+  document.body.classList.toggle('no-player', !state.showPlayer);
+  syncPlayerWidth();
+  if (routeLine) routeLine.setStyle({ color: state.accent });
+  applyClock();
+  tickClock();
+}
+
+function applyMap() {
+  const ll = state.followGps ? currentLatLon() : [state.lat, state.lon];
+  centerOn(ll, state.zoom);
+  marker.setLatLng(ll);
+}
+
+function applyAll(forceRefresh) {
+  applyVisual();
+  applyMap();
+  const ll = state.followGps ? currentLatLon() : [state.lat, state.lon];
+  if (state.followGps) refreshPlace(ll[0], ll[1], true);
+  else setPlace(state.city);
+  refreshWeather(ll[0], ll[1], forceRefresh);
+  refreshPrayers(ll[0], ll[1], forceRefresh);
+  if (state.followGps) startGeo(); else stopGeo();
+  saveState();
+  updateOfflineEstimate();
+}
+
+/* =====================================================================
+   PETA OFFLINE
+   ===================================================================== */
+const OFF_MIN_ZOOM = 12;
+let offBusy = false;
+
+function fmtBytes(n) {
+  if (!n) return '0 MB';
+  if (n < 1024 * 1024) return Math.max(1, Math.round(n / 1024)) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+async function refreshCacheInfo() {
+  const el = document.getElementById('offInfo');
+  if (!el) return;
+  const s = await TileCache.stats();
+  el.innerHTML = 'Tersimpan: <b>' + s.count.toLocaleString('id-ID') + '</b> tile · <b>' + fmtBytes(s.bytes) + '</b>';
+}
+
+function tileUrls(center, radiusKm, zMax) {
+  const mode = MAP_MODES[state.mapMode] || MAP_MODES.dark;
+  const specs = [mode.base, mode.ref, mode.ref2].filter(Boolean);
+  const urls = new Set();
+  const lat = center[0];
+  const mpp = z => 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, z);
+
+  for (const spec of specs) {
+    const top = Math.min(zMax, spec.maxNative);
+    for (let z = OFF_MIN_ZOOM; z <= top; z++) {
+      const c = map.project(L.latLng(center), z);
+      const r = (radiusKm * 1000) / mpp(z) / 256;
+      const x0 = Math.floor(c.x / 256 - r), x1 = Math.floor(c.x / 256 + r);
+      const y0 = Math.floor(c.y / 256 - r), y1 = Math.floor(c.y / 256 + r);
+      const n = Math.pow(2, z);
+
+      for (let x = x0; x <= x1; x++) {
+        if (x < 0 || x >= n) continue;
+        for (let y = y0; y <= y1; y++) {
+          if (y < 0 || y >= n) continue;
+          urls.add(spec.url.replace('{z}', z).replace('{y}', y).replace('{x}', x));
+        }
+      }
+    }
+  }
+  return Array.from(urls);
+}
+
+function updateOfflineEstimate() {
+  const el = document.getElementById('offEst');
+  if (!el) return;
+  const radius = parseInt(document.getElementById('offRadius').value, 10);
+  const zMax = parseInt(document.getElementById('offZoom').value, 10);
+  const center = state.followGps ? currentLatLon() : [state.lat, state.lon];
+  const n = tileUrls(center, radius, zMax).length;
+  const mb = n * 16 / 1024;
+  el.innerHTML = 'Perkiraan: <b>' + n.toLocaleString('id-ID') + '</b> tile · <b>± ' +
+    (mb >= 1 ? mb.toFixed(0) + ' MB' : '1 MB') + '</b> untuk area sekitar lokasi sekarang.';
+}
+
+async function downloadOffline() {
+  if (offBusy) return;
+
+  const radius = parseInt(document.getElementById('offRadius').value, 10);
+  const zMax = parseInt(document.getElementById('offZoom').value, 10);
+  const center = state.followGps ? currentLatLon() : [state.lat, state.lon];
+  const queue = tileUrls(center, radius, zMax);
+  const total = queue.length;
+
+  const bar = document.getElementById('offBar');
+  const fill = bar.querySelector('i');
+  const prog = document.getElementById('offProgress');
+  const btn = document.getElementById('offDownload');
+
+  offBusy = true;
+  btn.disabled = true;
+  btn.textContent = 'Mengunduh...';
+  bar.classList.add('on');
+  fill.style.width = '0%';
+  prog.textContent = '0% · 0 / ' + total.toLocaleString('id-ID') + ' tile';
+
+  let done = 0, ok = 0, fail = 0;
+
+  async function worker() {
+    while (queue.length) {
+      const url = queue.shift();
+      try {
+        if (!(await TileCache.has(url))) {
+          const r = await fetch(url);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          await TileCache.put(url, await r.blob());
+        }
+        ok++;
+      } catch (e) {
+        fail++;
+      }
+      done++;
+      if (done % 5 === 0 || done === total) {
+        const pct = Math.round(done / total * 100);
+        fill.style.width = pct + '%';
+        prog.textContent = pct + '% · ' + done.toLocaleString('id-ID') + ' / ' +
+          total.toLocaleString('id-ID') + ' tile' + (fail ? ' · ' + fail + ' gagal' : '');
+      }
+    }
+  }
+
+  await Promise.all([worker(), worker(), worker(), worker(), worker()]);
+  await TileCache.evict();
+
+  bar.classList.remove('on');
+  btn.disabled = false;
+  btn.textContent = 'Unduh peta sekitar sini';
+  prog.textContent = 'Selesai: ' + ok.toLocaleString('id-ID') + ' tile siap offline' +
+    (fail ? ', ' + fail + ' gagal' : '') + '.';
+  offBusy = false;
+  refreshCacheInfo();
+}
+
+/* events */
+document.getElementById('offRadius').addEventListener('change', updateOfflineEstimate);
+document.getElementById('offZoom').addEventListener('change', updateOfflineEstimate);
+document.getElementById('offDownload').addEventListener('click', downloadOffline);
+document.getElementById('offClear').addEventListener('click', async () => {
+  if (offBusy) return;
+  await TileCache.clear();
+  document.getElementById('offProgress').textContent = 'Cache peta dihapus.';
+  refreshCacheInfo();
+});
+document.getElementById('btnSettings').addEventListener('click', () => {
+  buildSettings();
+  document.getElementById('settingsOverlay').classList.remove('hidden');
+});
+
+document.getElementById('showPlayer').addEventListener('change', e => {
+  state.showPlayer = e.target.checked;
+  applyVisual();
+  saveState();
+});
+
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById(btn.getAttribute('data-close')).classList.add('hidden');
+  });
+});
+
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => {
+    if (e.target === ov) ov.classList.add('hidden');
+  });
+});
+
+document.getElementById('swatches').addEventListener('click', e => {
+  const b = e.target.closest('.swatch');
+  if (!b) return;
+  state.accent = b.getAttribute('data-c');
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s === b));
+  applyVisual();
+  saveState();
+});
+
+document.getElementById('citySel').addEventListener('change', e => {
+  const c = CITIES.find(x => x.name === e.target.value);
+  if (!c) return;
+  state.city = c.name;
+  state.lat = c.lat;
+  state.lon = c.lon;
+  state.followGps = false;
+  document.getElementById('followGps').checked = false;
+  last = null;
+  trail.length = 0;
+  polyline.setLatLngs(trail);
+  applyAll(true);
+});
+
+document.getElementById('shift').addEventListener('input', e => {
+  state.shift = parseInt(e.target.value, 10);
+  document.getElementById('shiftVal').textContent = state.shift + '%';
+  applyMap();
+  saveState();
+});
+
+document.getElementById('zoom').addEventListener('input', e => {
+  state.zoom = parseInt(e.target.value, 10);
+  document.getElementById('zoomVal').textContent = state.zoom;
+  applyMap();
+  saveState();
+});
+
+document.getElementById('mapModePick').addEventListener('click', e => {
+  const b = e.target.closest('button[data-mode]');
+  if (!b) return;
+  const mode = b.getAttribute('data-mode');
+  if (!MAP_MODES[mode]) return;
+  state.mapMode = mode;
+  markActive('mapModePick', 'data-mode', mode);
+  applyMapMode(mode);
+  buildSettings();
+  saveState();
+});
+
+document.getElementById('fontPick').addEventListener('click', e => {
+  const b = e.target.closest('button[data-font]');
+  if (!b) return;
+  state.clockFont = b.getAttribute('data-font');
+  markActive('fontPick', 'data-font', state.clockFont);
+  applyClock();
+  saveState();
+});
+
+document.getElementById('clockSize').addEventListener('input', e => {
+  state.clockScale = parseInt(e.target.value, 10);
+  applyClock();
+  saveState();
+});
+
+document.getElementById('followGps').addEventListener('change', e => {
+  state.followGps = e.target.checked;
+  applyAll(false);
+});
+
+document.getElementById('showSpeed').addEventListener('change', e => {
+  state.showSpeed = e.target.checked;
+  applyVisual();
+  saveState();
+});
+
+document.getElementById('showWeather').addEventListener('change', e => {
+  state.showWeather = e.target.checked;
+  applyVisual();
+  saveState();
+});
+
+document.getElementById('showPrayers').addEventListener('change', e => {
+  state.showPrayers = e.target.checked;
+  applyVisual();
+  saveState();
+});
+
+document.getElementById('h24').addEventListener('change', e => {
+  state.h24 = e.target.checked;
+  applyVisual();
+  saveState();
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+  state = Object.assign({}, DEFAULTS);
+  last = null;
+  trail.length = 0;
+  polyline.setLatLngs(trail);
+  clearRoute();
+  document.getElementById('destInput').value = '';
+  searchBox.classList.remove('has');
+  applyMapMode(state.mapMode);
+  buildSettings();
+  renderDock();
+  applyAll(true);
+});
+
+window.addEventListener('resize', () => {
+  centerOn(state.followGps ? currentLatLon() : [state.lat, state.lon], state.zoom);
+  syncPlayerWidth();
+});
+
+/* =====================================================================
+   APP DRAWER
+   ---------------------------------------------------------------------
+   HTML murni tidak bisa membuka app Android. Wrapper WebView harus
+   menyuntikkan objek ini sebelum halaman dimuat:
+
+     window.HUApps = {
+       list:   function () { return JSON.stringify([{pkg:'com.x', label:'X', icon:'data:image/png;base64,...'}]); },
+       launch: function (pkg) { ... }
+     };
+
+   Kalau objeknya tidak ada (dibuka di Chrome), drawer menampilkan pesan.
+   ===================================================================== */
+function huAppsList() {
+  if (!window.HUApps || typeof window.HUApps.list !== 'function') return null;
+  try { return JSON.parse(window.HUApps.list()); } catch (e) { return null; }
+}
+
+/* Tombol bantuan yang hanya muncul di APK (butuh jembatan AndroidBridge). */
+function refreshBridgeButtons() {
+  const notif = document.getElementById('notifBtn');
+  const home = document.getElementById('homeBtn');
+  const info = document.getElementById('appInfoBtn');
+  const help = document.getElementById('notifHelp');
+  const br = window.AndroidBridge;
+  if (!br || typeof br.notifAccess !== 'function') return;
+
+  let granted = true;
+  try { granted = !!br.notifAccess(); } catch (e) { granted = true; }
+  notif.style.display = granted ? 'none' : '';
+  if (help) help.style.display = granted ? 'none' : '';
+  if (info) info.style.display = granted ? 'none' : '';
+
+  try {
+    home.style.display = (typeof br.isDefaultHome === 'function' && br.isDefaultHome()) ? 'none' : '';
+  } catch (e) { home.style.display = 'none'; }
+}
+
+document.getElementById('notifBtn').addEventListener('click', () => {
+  try { window.AndroidBridge.openNotifAccess(); } catch (e) {}
+});
+
+const appInfoBtn = document.getElementById('appInfoBtn');
+if (appInfoBtn) {
+  appInfoBtn.addEventListener('click', () => {
+    try { window.AndroidBridge.openAppInfo(); } catch (e) {}
+  });
+}
+
+document.getElementById('homeBtn').addEventListener('click', () => {
+  try { window.AndroidBridge.openHomeSettings(); } catch (e) {}
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshBridgeButtons();
+});
+
+function colorFor(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360;
+  return 'hsl(' + h + ', 55%, 62%)';
+}
+
+function renderApps() {
+  const grid = document.getElementById('appGrid');
+  const apps = huAppsList();
+
+  if (!apps) {
+    grid.innerHTML = '<div class="empty">Drawer ini butuh wrapper Android (APK WebView) untuk membaca daftar aplikasi dan membukanya.<br><br>' +
+      'Di browser biasa, hanya dashboard ini yang bisa ditampilkan. Di APK nanti, semua app yang terpasang muncul di sini.</div>';
+    return;
+  }
+  if (apps.length === 0) {
+    grid.innerHTML = '<div class="empty">Tidak ada aplikasi yang bisa dibuka.</div>';
+    return;
+  }
+
+  grid.innerHTML = apps.map(a => {
+    const initial = (a.label || '?').trim().charAt(0).toUpperCase();
+    const inner = a.icon
+      ? '<img src="' + a.icon + '" alt="">'
+      : initial;
+    const bg = a.icon ? 'transparent' : colorFor(a.pkg || a.label || 'x');
+    return '<div class="app" data-pkg="' + (a.pkg || '') + '">' +
+      '<div class="box" style="background:' + bg + '">' + inner + '</div>' +
+      '<div class="nm">' + (a.label || a.pkg) + '</div></div>';
+  }).join('');
+
+  grid.querySelectorAll('.app').forEach(el => {
+    el.addEventListener('click', () => {
+      const pkg = el.getAttribute('data-pkg');
+      if (pkg && window.HUApps && typeof window.HUApps.launch === 'function') {
+        window.HUApps.launch(pkg);
+        document.getElementById('appsOverlay').classList.add('hidden');
+      }
+    });
+  });
+}
+
+/* =====================================================================
+   START
+   ===================================================================== */
+/* label lokasi terakhir (biar tidak kosong saat start offline) */
+try {
+  const c = JSON.parse(localStorage.getItem(PLACE_KEY) || 'null');
+  if (c && c.label) placeLabel = c.label;
+} catch (e) {}
+if (!placeLabel) placeLabel = state.city;
+
+/* jadwal sholat terakhir untuk hari ini (biar langsung tampil walau offline) */
+try {
+  const p = JSON.parse(localStorage.getItem(PRAYER_KEY) || 'null');
+  if (p && p.date === todayStr() && p.timings) {
+    prayerCache = p.timings;
+    prayerDate = p.date;
+  }
+} catch (e) {}
+
+buildSettings();
+applyVisual();
+renderDock();
+renderPlayer();
+/* jembatan Android kadang disuntik setelah halaman jalan -> segarkan sekali lagi */
+setTimeout(() => { renderDock(); renderDockPick(); syncMedia(); }, 1500);
+setPlace(state.followGps ? placeLabel : state.city);
+centerOn([state.lat, state.lon], state.zoom);
+marker.setLatLng([state.lat, state.lon]);
+if (prayerCache) renderPrayers(prayerCache);
+refreshWeather(state.lat, state.lon, true);
+refreshPrayers(state.lat, state.lon, true);
+refreshCacheInfo();
+if (state.followGps) startGeo();
+
+setInterval(() => {
+  const ll = state.followGps ? currentLatLon() : [state.lat, state.lon];
+  if (state.followGps) refreshPlace(ll[0], ll[1]);
+  refreshWeather(ll[0], ll[1]);
+  refreshPrayers(ll[0], ll[1]);
+}, 60 * 1000);
+
+/* sinyal balik lagi (keluar dari area blank spot / tethering nyambung):
+   langsung segarkan cuaca, sholat, dan nama tempat tanpa nunggu timer */
+window.addEventListener('online', () => {
+  weatherFailAt = 0;
+  weatherTries = 0;
+  const ll = state.followGps ? currentLatLon() : [state.lat, state.lon];
+  refreshWeather(ll[0], ll[1], true);
+  refreshPrayers(ll[0], ll[1], true);
+  if (state.followGps) refreshPlace(ll[0], ll[1], true);
+});
+</script>
+</body>
+</html>

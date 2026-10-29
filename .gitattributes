@@ -1,0 +1,27 @@
+# Normalisasi akhir baris supaya repo tetap rapi di Windows/Linux
+* text=auto
+
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.java text eol=lf
+*.xml  text eol=lf
+*.py   text eol=lf
+
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.jks   binary
+*.apk   binary

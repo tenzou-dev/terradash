@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Mockup Launcher Head Unit 7"</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px;
+    background: #05070a;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: #e8eef6;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  p.sub { margin: 0 0 26px; color: #7f8ea3; font-size: 13px; }
+  .row { display: flex; gap: 26px; flex-wrap: wrap; }
+  .wrap { zoom: .72; }
+  .label { font-size: 15px; color: #93a4b8; margin: 0 0 10px; }
+  .label b { color: #e8eef6; font-weight: 600; }
+
+  .screen {
+    position: relative;
+    width: 1024px; height: 600px;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.06);
+    padding: 34px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+  .a { background: radial-gradient(1200px 600px at 18% 0%, #17222e 0%, #0b1118 55%, #070b10 100%); }
+  .b { background: radial-gradient(1000px 700px at 50% 120%, #10202a 0%, #0a1218 60%, #060a0e 100%); }
+
+  .clock { font-weight: 200; letter-spacing: -2px; line-height: .95; }
+  .date { color: #8b9cb1; letter-spacing: .4px; }
+
+  /* ---------- A : dashboard ---------- */
+  .a .top { display: flex; align-items: flex-end; justify-content: space-between; }
+  .a .clock { font-size: 116px; }
+  .a .date { font-size: 22px; margin-top: 6px; }
+  .a .status { text-align: right; font-size: 15px; color: #8b9cb1; line-height: 1.7; }
+  .a .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f5a524; margin-right: 8px; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 30px; flex: 1; }
+  .card {
+    background: linear-gradient(160deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 20px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px;
+  }
+  .card .ic { width: 44px; height: 44px; color: #f5a524; }
+  .card .nm { font-size: 17px; color: #dbe5f0; }
+
+  .dock { display: flex; gap: 12px; margin-top: 22px; }
+  .pill {
+    flex: 1; height: 58px; border-radius: 16px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.06);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 16px; color: #b9c7d8;
+  }
+  .pill .ic { width: 24px; height: 24px; color: #f5a524; }
+
+  /* ---------- B : carplay style ---------- */
+  .b { align-items: center; text-align: center; }
+  .b .clock { font-size: 96px; margin-top: 8px; }
+  .b .date { font-size: 19px; margin-top: 4px; }
+  .b .apps {
+    display: grid; grid-template-columns: repeat(4, 130px); gap: 26px 34px;
+    margin-top: 34px; justify-content: center; flex: 1; align-content: start;
+  }
+  .b .app { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .b .app .box {
+    width: 92px; height: 92px; border-radius: 24px;
+    background: linear-gradient(160deg, #1b2b36, #121c24);
+    border: 1px solid rgba(255,255,255,.08);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .b .app .box .ic { width: 42px; height: 42px; color: #3ddc97; }
+  .b .app .nm { font-size: 15px; color: #b9c7d8; }
+  .b .dock {
+    width: 640px; height: 76px; border-radius: 26px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.07);
+    display: flex; align-items: center; justify-content: space-around;
+    margin-top: 10px;
+  }
+  .b .dock .ic { width: 30px; height: 30px; color: #9fb3c8; }
+</style>
+</head>
+<body>
+  <h1>Mockup tampilan head unit 7" (1024 x 600)</h1>
+  <p class="sub">Dua arah desain. Ini cuma gambar, bukan screenshot unit asli. Bisa diganti warna, ikon, jumlah tile, dan urutan.</p>
+
+  <div class="row">
+    <div class="wrap">
+      <p class="label"><b>A.</b> Dashboard — jam besar + 6 tile app + dock bawah</p>
+      <div class="screen a">
+        <div class="top">
+          <div>
+            <div class="clock">18:42</div>
+            <div class="date">Rabu, 28 Oktober</div>
+          </div>
+          <div class="status">
+            <div><span class="dot"></span>ACC ON</div>
+            <div>Wi-Fi tersambung</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg><div class="nm">Musik</div></div>
+          <div class="card"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg><div class="nm">Navigasi</div></div>
+          <div class="card"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="8" width="18" height="10" rx="2.5"/><path d="M7 18v2M17 18v2"/><circle cx="8.5" cy="13" r="1.2"/><circle cx="15.5" cy="13" r="1.2"/></svg><div class="nm">Radio</div></div>
+          <div class="card"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.4"/><path d="M8 6l2-2h4l2 2"/></svg><div class="nm">Kamera</div></div>
+          <div class="card"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><div class="nm">Telepon</div></div>
+          <div class="card"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="6" height="6" rx="1.6"/><rect x="14" y="4" width="6" height="6" rx="1.6"/><rect x="4" y="14" width="6" height="6" rx="1.6"/><rect x="14" y="14" width="6" height="6" rx="1.6"/></svg><div class="nm">Semua App</div></div>
+        </div>
+
+        <div class="dock">
+          <div class="pill"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20v-7M10 20V6M16 20v-9M22 20V9"/></svg> Spotify</div>
+          <div class="pill"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-7 9 7"/><path d="M6 10v9h12v-9"/></svg> Home</div>
+          <div class="pill"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></svg> Setelan</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <p class="label"><b>B.</b> CarPlay-style — jam di tengah + grid ikon besar + dock</p>
+      <div class="screen b">
+        <div class="clock">18:42</div>
+        <div class="date">Rabu, 28 Oktober</div>
+
+        <div class="apps">
+          <div class="app"><div class="box"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></div><div class="nm">Musik</div></div>
+          <div class="app"><div class="box"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></div><div class="nm">Maps</div></div>
+          <div class="app"><div class="box"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="8" width="18" height="10" rx="2.5"/><path d="M7 18v2M17 18v2"/></svg></div><div class="nm">Radio</div></div>
+          <div class="app"><div class="box"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.4"/></svg></div><div class="nm">Kamera</div></div>
+          <div class="app"><div class="box"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></div><div class="nm">Telepon</div></div>
+          <div class="app"><div class="box"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="6" height="6" rx="1.6"/><rect x="14" y="4" width="6" height="6" rx="1.6"/><rect x="4" y="14" width="6" height="6" rx="1.6"/><rect x="14" y="14" width="6" height="6" rx="1.6"/></svg></div><div class="nm">Semua App</div></div>
+          <div class="app"><div class="box"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><div class="nm">YouTube</div></div>
+          <div class="app"><div class="box"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 2.6a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L6 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5c.1-.3.1-.7.1-1z"/></svg></div><div class="nm">Setelan</div></div>
+        </div>
+
+        <div class="dock">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-7 9 7"/><path d="M6 10v9h12v-9"/></svg>
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/></svg>
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
