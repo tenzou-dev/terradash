@@ -16,14 +16,14 @@ dock aplikasi, dan navigasi ke tujuan — semuanya dalam satu layar.
 </p>
 
 <p align="center">
-  <img src="docs/direction.jpg" alt="Tampilan Direction TerraDash" width="860"> 
-</p>  
+  <img src="docs/direction.jpg" alt="Tampilan navigasi rute: peta, kartu belokan, dan ETA" width="860">
+</p>
 
-<p align="center">  
+<p align="center">
   <img src="docs/setting.jpg" alt="Panel pengaturan TerraDash" width="860">
 </p>
 
-Tampilan di atas dirender pada 1042×600 (layar head unit 7"), skala 2×.
+Screenshot diambil langsung dari head unit 7" (resolusi 1280×575).
 
 ---
 
@@ -92,7 +92,7 @@ android/              Wrapper WebView + launcher
   ├── build.ps1       Build APK tanpa Gradle (aapt2 + javac + d8 + zipalign)
   ├── probe/          APK uji minimal untuk diagnosa WebView
   └── README.md       Panduan pasang, izin, build, troubleshooting
-docs/                 Screenshot untuk README (dashboard.jpg, settings.jpg)
+docs/                 Screenshot README + gambar social preview
 tools/                Skrip bantu (cek encoding, verifikasi APK)
 ```
 
