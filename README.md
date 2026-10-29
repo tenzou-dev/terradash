@@ -9,6 +9,18 @@ dock aplikasi, dan navigasi ke tujuan — semuanya dalam satu layar.
 > **Mau langsung pakai?** Unduh APK-nya di halaman
 > [**Releases**](../../releases/latest) — tidak perlu build sendiri.
 
+## Tampilan
+
+<p align="center">
+  <img src="docs/dashboard.jpg" alt="Dashboard TerraDash: peta satelit, jam, kecepatan GPS, cuaca, jadwal sholat, pemutar musik, dan dock aplikasi" width="860">
+</p>
+
+<p align="center">
+  <img src="docs/settings.jpg" alt="Panel pengaturan TerraDash" width="620">
+</p>
+
+Tampilan di atas dirender pada 1042×600 (layar head unit 7"), skala 2×.
+
 ---
 
 ## Fitur
@@ -76,6 +88,7 @@ android/              Wrapper WebView + launcher
   ├── build.ps1       Build APK tanpa Gradle (aapt2 + javac + d8 + zipalign)
   ├── probe/          APK uji minimal untuk diagnosa WebView
   └── README.md       Panduan pasang, izin, build, troubleshooting
+docs/                 Screenshot untuk README (dashboard.jpg, settings.jpg)
 tools/                Skrip bantu (cek encoding, verifikasi APK)
 ```
 
