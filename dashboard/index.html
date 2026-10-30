@@ -32,6 +32,34 @@
     --clock-track: .5px;
     --clock-scale: 1;
     --tile-filter: brightness(.95) contrast(1.05) saturate(.9);
+    /* nilai cadangan kalau JS polyfill tidak jalan */
+    --f1: 18px;
+    --f2: 20px;
+    --f3: 58px;
+    --f4: 13px;
+    --f5: 14px;
+    --f6: 8px;
+    --f7: 30px;
+    --f8: 24px;
+    --f9: 10px;
+    --f10: 12px;
+    --f11: 8px;
+    --f12: 12px;
+    --f13: 40px;
+    --f14: 14px;
+    --f15: 250px;
+    --f16: 40px;
+    --f17: 26px;
+    --f18: 28px;
+    --f19: 44px;
+    --f20: 17px;
+    --f21: 12px;
+    --f22: 8px;
+    --f23: 380px;
+    --f24: 340px;
+    --f25: 430px;
+    --f26: 880px;
+    --f27: 560px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -78,7 +106,7 @@
   /* ---------------- HUD ---------------- */
   #hud {
     position: fixed; top: 0; right: 0; bottom: 0; left: 0;
-    padding: clamp(18px, 3.2vh, 34px) clamp(20px, 3.4vw, 44px);
+    padding: var(--f1) var(--f2);
     display: flex; flex-direction: column;
     pointer-events: none;
   }
@@ -87,7 +115,7 @@
   .clock {
     font-family: var(--clock-font);
     font-weight: var(--clock-weight);
-    font-size: calc(var(--clock-scale) * clamp(58px, 11.4vw, 118px));
+    font-size: calc(var(--clock-scale) * var(--f3));
     line-height: .9;
     letter-spacing: var(--clock-track);
     font-variant-numeric: tabular-nums;
@@ -96,14 +124,14 @@
   }
   .date {
     margin-top: .55em;
-    font-size: clamp(13px, 1.9vw, 20px);
+    font-size: var(--f4);
     color: #d7e2ef;
     letter-spacing: .2px;
     text-shadow: 0 1px 10px rgba(0,0,0,.5);
   }
   .speed {
     margin-top: .5em;
-    font-size: clamp(14px, 1.9vw, 20px);
+    font-size: var(--f5);
     color: var(--muted);
     letter-spacing: .3px;
     display: flex; align-items: baseline; gap: 6px;
@@ -115,26 +143,26 @@
   .speed i { font-style: normal; font-size: .8em; letter-spacing: .5px; }
 
   .spacer { flex: 1; }
-  .bottom { display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 14px); }
+  .bottom { display: flex; flex-direction: column; gap: var(--f6); }
 
   .weather { display: flex; align-items: center; gap: 14px; }
-  .wicon { width: clamp(30px, 4.4vw, 46px); height: clamp(30px, 4.4vw, 46px); color: var(--accent); }
-  .temp { font-size: clamp(24px, 3.6vw, 38px); font-weight: 400; line-height: 1; }
-  .place { font-size: clamp(10px, 1.3vw, 13px); color: var(--muted); margin-top: 4px; }
+  .wicon { width: var(--f7); height: var(--f7); color: var(--accent); }
+  .temp { font-size: var(--f8); font-weight: 400; line-height: 1; }
+  .place { font-size: var(--f9); color: var(--muted); margin-top: 4px; }
 
-  .prayers { display: flex; gap: clamp(12px, 2.6vw, 34px); align-items: flex-end; }
+  .prayers { display: flex; gap: var(--f10); align-items: flex-end; }
   .prayer .nm {
-    font-size: clamp(8px, 1.05vw, 11px);
+    font-size: var(--f11);
     letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted);
   }
-  .prayer .tm { font-size: clamp(12px, 1.7vw, 17px); margin-top: 3px; color: #d7e2ef; }
+  .prayer .tm { font-size: var(--f12); margin-top: 3px; color: #d7e2ef; }
   .prayer.next .nm { color: var(--accent); }
   .prayer.next .tm { color: var(--accent); font-weight: 600; }
 
   /* ---------------- TOMBOL ---------------- */
   .actions { display: flex; gap: 10px; pointer-events: auto; }
   .iconbtn {
-    width: clamp(40px, 5.2vw, 52px); height: clamp(40px, 5.2vw, 52px);
+    width: var(--f13); height: var(--f13);
     border-radius: 50%;
     background: rgba(10, 16, 24, .55);
     border: 1px solid rgba(255,255,255,.12);
@@ -153,7 +181,7 @@
   .searchWrap { position: relative; flex: 0 1 240px; min-width: 0; }
   .search {
     display: flex; align-items: center; gap: 8px;
-    height: clamp(40px, 5.2vw, 52px);
+    height: var(--f13);
     width: 100%; min-width: 112px;
     padding: 0 10px 0 14px;
     border-radius: 999px;
@@ -179,9 +207,9 @@
 
   .sugg {
     position: absolute; top: calc(100% + 8px); right: 0;
-    width: min(380px, 62vw);
+    width: var(--f23);
     max-height: 42vh; overflow-y: auto;
-    background: #0b1219f7; border: 1px solid rgba(255,255,255,.1);
+    background: rgba(11, 18, 25, 0.97); border: 1px solid rgba(255,255,255,.1);
     border-radius: 16px; padding: 6px; z-index: 60;
     box-shadow: 0 20px 44px rgba(0,0,0,.55);
   }
@@ -198,7 +226,7 @@
 
   #routeCard {
     display: none;
-    width: min(340px, 42vw); margin-top: 12px; margin-left: auto;
+    width: var(--f24); margin-top: 12px; margin-left: auto;
     background: rgba(9, 14, 21, .87);
     border: 1px solid rgba(255,255,255,.1);
     border-radius: 18px; padding: 12px 14px 14px;
@@ -242,7 +270,7 @@
     display: grid;
     grid-template-columns: minmax(0, max-content) auto;
     grid-template-areas: "w w" "p d";
-    column-gap: clamp(14px, 2vw, 28px);
+    column-gap: var(--f14); grid-column-gap: var(--f14);
     align-items: end;
   }
   body.no-player .weather { grid-area: w; }
@@ -253,7 +281,7 @@
     position: relative; overflow: hidden;
     display: flex; align-items: center; gap: 10px;
     flex: 0 0 auto;
-    width: clamp(250px, 34vw, 420px);
+    width: var(--f15);
     padding: 9px 12px 13px;
     border-radius: 16px;
     background: rgba(9, 14, 21, .7);
@@ -262,7 +290,7 @@
     pointer-events: auto;
   }
   .player .art {
-    flex: none; width: clamp(40px, 4.6vw, 50px); height: clamp(40px, 4.6vw, 50px);
+    flex: none; width: var(--f16); height: var(--f16);
     border-radius: 12px;
     background: rgba(255,255,255,.06); overflow: hidden;
     display: flex; align-items: center; justify-content: center;
@@ -281,7 +309,7 @@
   }
   .player .ctl { flex: none; display: flex; gap: 4px; align-items: center; }
   .pbtn {
-    width: clamp(26px, 3vw, 32px); height: clamp(26px, 3vw, 32px);
+    width: var(--f17); height: var(--f17);
     border-radius: 50%; border: 0;
     background: transparent; color: #d7e2ef; cursor: pointer;
     display: flex; align-items: center; justify-content: center; padding: 0;
@@ -290,7 +318,7 @@
   .pbtn svg { width: 15px; height: 15px; }
   .pbtn.big {
     background: var(--accent); color: #0a1118;
-    width: clamp(28px, 3.2vw, 34px); height: clamp(28px, 3.2vw, 34px);
+    width: var(--f18); height: var(--f18);
   }
   .pbtn.big svg { width: 16px; height: 16px; }
   .player .pb {
@@ -301,7 +329,7 @@
 
   .appDock { margin-left: auto; display: flex; align-items: center; gap: 10px; pointer-events: auto; }
   .dockBtn {
-    width: clamp(44px, 5.4vw, 54px); height: clamp(44px, 5.4vw, 54px);
+    width: var(--f19); height: var(--f19);
     border-radius: 15px; border: 1px solid rgba(255,255,255,.09);
     background: rgba(9, 14, 21, .66);
     backdrop-filter: blur(8px);
@@ -322,7 +350,7 @@
   body.clean #btnSettings,
   body.clean #btnFull,
   body.clean #routeCard { display: none !important; }
-  body.clean .speed { font-size: clamp(17px, 2.2vw, 24px); }
+  body.clean .speed { font-size: var(--f20); }
   body.clean .speed b { color: var(--accent); font-size: 1.7em; }
   body.clean #credit { opacity: .6; }
 
@@ -338,7 +366,7 @@
   #btnExitFull svg { width: 40%; height: 40%; }
 
   #credit {
-    position: fixed; right: clamp(12px, 1.6vw, 20px); bottom: clamp(8px, 1.2vh, 14px);
+    position: fixed; right: var(--f21); bottom: var(--f22);
     font-size: 11px; color: rgba(255,255,255,.55);
     text-shadow: 0 1px 6px rgba(0,0,0,.6);
     pointer-events: none;
@@ -355,14 +383,14 @@
   .overlay.center { align-items: center; justify-content: center; }
 
   .sheet {
-    width: min(430px, 90vw); height: 100%;
-    background: #0b1219f7;
+    width: var(--f25); height: 100%;
+    background: rgba(11, 18, 25, 0.97);
     border-left: 1px solid rgba(255,255,255,.08);
     padding: 22px 22px 34px;
     overflow-y: auto;
   }
   .sheet.wide {
-    width: min(880px, 92vw); height: min(560px, 86vh);
+    width: var(--f26); height: var(--f27);
     border: 1px solid rgba(255,255,255,.09);
     border-radius: 24px;
     padding: 22px 24px;
@@ -494,7 +522,7 @@
     color: var(--accent); font-size: 14px; font-weight: 700;
   }
 
-  .pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; grid-gap: 8px; }
   .pick button {
     padding: 10px 8px; border-radius: 10px;
     background: rgba(255,255,255,.04);
@@ -528,7 +556,7 @@
   /* ---------------- APP DRAWER ---------------- */
   .appGrid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-    gap: 16px; padding-top: 4px;
+    gap: 16px; grid-gap: 16px; padding-top: 4px;
   }
   .app {
     display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -566,8 +594,8 @@
 
   /* WebView lama (< Chromium 84) belum mendukung gap di flexbox.
      Kelas .no-flex-gap dipasang dari JS kalau terdeteksi. */
-  .no-flex-gap .bottom > * + * { margin-top: clamp(8px, 1.4vh, 14px); }
-  .no-flex-gap .prayers > * + * { margin-left: clamp(12px, 2.6vw, 34px); }
+  .no-flex-gap .bottom > * + * { margin-top: var(--f6); }
+  .no-flex-gap .prayers > * + * { margin-left: var(--f10); }
   .no-flex-gap .weather > * + * { margin-left: 14px; }
   .no-flex-gap .trRow > * + * { margin-left: 10px; }
   .no-flex-gap .search > * + * { margin-left: 8px; }
@@ -580,7 +608,97 @@
   .no-flex-gap .swatches > * + * { margin-left: 12px; }
   .no-flex-gap .dual > * + * { margin-left: 10px; }
   .no-flex-gap .app > * + * { margin-top: 8px; }
+  .no-flex-gap #hud .top > * + * { margin-left: 16px; }
+  .no-flex-gap .actions > * + * { margin-left: 10px; }
+  .no-flex-gap .dockRow > * + * { margin-left: 14px; }
+  .no-flex-gap .dockRow > .appDock { margin-left: auto; }
+  .no-flex-gap .chips > * + * { margin-left: 8px; }
+  .no-flex-gap .chip > * + * { margin-left: 8px; }
+  .no-flex-gap .row > * + * { margin-left: 12px; }
 </style>
+<script>
+/* ------------------------------------------------------------------
+   Polyfill clamp() / min() / max() untuk WebView lama (Chromium < 79).
+   Nilainya dihitung ulang tiap kali ukuran layar berubah.
+   ------------------------------------------------------------------ */
+(function () {
+  var FIT = {
+    "--f1": "clamp(18px, 3.2vh, 34px)",
+    "--f2": "clamp(20px, 3.4vw, 44px)",
+    "--f3": "clamp(58px, 11.4vw, 118px)",
+    "--f4": "clamp(13px, 1.9vw, 20px)",
+    "--f5": "clamp(14px, 1.9vw, 20px)",
+    "--f6": "clamp(8px, 1.4vh, 14px)",
+    "--f7": "clamp(30px, 4.4vw, 46px)",
+    "--f8": "clamp(24px, 3.6vw, 38px)",
+    "--f9": "clamp(10px, 1.3vw, 13px)",
+    "--f10": "clamp(12px, 2.6vw, 34px)",
+    "--f11": "clamp(8px, 1.05vw, 11px)",
+    "--f12": "clamp(12px, 1.7vw, 17px)",
+    "--f13": "clamp(40px, 5.2vw, 52px)",
+    "--f14": "clamp(14px, 2vw, 28px)",
+    "--f15": "clamp(250px, 34vw, 420px)",
+    "--f16": "clamp(40px, 4.6vw, 50px)",
+    "--f17": "clamp(26px, 3vw, 32px)",
+    "--f18": "clamp(28px, 3.2vw, 34px)",
+    "--f19": "clamp(44px, 5.4vw, 54px)",
+    "--f20": "clamp(17px, 2.2vw, 24px)",
+    "--f21": "clamp(12px, 1.6vw, 20px)",
+    "--f22": "clamp(8px, 1.2vh, 14px)",
+    "--f23": "min(380px, 62vw)",
+    "--f24": "min(340px, 42vw)",
+    "--f25": "min(430px, 90vw)",
+    "--f26": "min(880px, 92vw)",
+    "--f27": "min(560px, 86vh)"
+  };
+
+  function px(term) {
+    var m = /^(-?[0-9.]+)(px|vw|vh|vmin|vmax)?$/.exec(String(term).trim());
+    if (!m) return null;
+    var n = parseFloat(m[1]), u = m[2] || "";
+    var w = document.documentElement.clientWidth || window.innerWidth || 1024;
+    var h = document.documentElement.clientHeight || window.innerHeight || 600;
+    if (u === "vw") return n * w / 100;
+    if (u === "vh") return n * h / 100;
+    if (u === "vmin") return n * Math.min(w, h) / 100;
+    if (u === "vmax") return n * Math.max(w, h) / 100;
+    return n;
+  }
+
+  function calc(expr) {
+    var fn = expr.slice(0, expr.indexOf("("));
+    var body = expr.slice(expr.indexOf("(") + 1, expr.lastIndexOf(")"));
+    var a = body.split(",").map(px);
+    for (var i = 0; i < a.length; i++) if (a[i] === null) return null;
+    if (fn === "clamp") return Math.max(a[0], Math.min(a[1], a[2]));
+    if (fn === "min") return Math.min.apply(null, a);
+    return Math.max.apply(null, a);
+  }
+
+  function apply() {
+    var root = document.documentElement;
+    for (var name in FIT) {
+      if (!FIT.hasOwnProperty(name)) continue;
+      var v = calc(FIT[name]);
+      if (v !== null) root.style.setProperty(name, Math.round(v * 100) / 100 + "px");
+    }
+  }
+
+  apply();
+  /* beberapa WebView melaporkan ukuran 0 saat <head> masih diparse */
+  window.addEventListener("load", apply);
+  setTimeout(apply, 150);
+  setTimeout(apply, 700);
+
+  var t = null;
+  function later() {
+    if (t) clearTimeout(t);
+    t = setTimeout(apply, 80);
+  }
+  window.addEventListener("resize", later);
+  window.addEventListener("orientationchange", later);
+})();
+</script>
 </head>
 <body>
   <div id="map"></div>
@@ -814,7 +932,7 @@
         <label>Tentang aplikasi</label>
         <div class="about">
           <div class="nm">TerraDash</div>
-          <div class="ver">Versi 1.0.3</div>
+          <div class="ver">Versi 1.0.4</div>
           <div class="cr">&copy; TenZou.Dev 2026</div>
         </div>
         <button class="ghost" id="notifBtn" style="display:none;margin-top:10px">Aktifkan akses notifikasi (kontrol musik)</button>

@@ -3,6 +3,17 @@
 Semua perubahan penting TerraDash. Format mengikuti
 [Keep a Changelog](https://keepachangelog.com/id/1.1.0/).
 
+## [1.0.4] — 2026-10-30
+
+### Diperbaiki
+- **Tampilan rusak di head unit dengan WebView lama** (Chromium 61 / Android
+  System WebView 61, umum di unit 8227L). Penyebabnya `clamp()`, `min()`, dan
+  flex `gap` yang baru ada di Chrome 79–84, sehingga semua ukuran jatuh ke
+  nilai default: ikon raksasa, jam mengecil, jadwal sholat berdempetan.
+- Ditambahkan polyfill `clamp()` / `min()` / `max()` (dihitung ulang saat layar
+  berubah) plus margin pengganti flex `gap`, `grid-gap`, dan warna `#rrggbbaa`
+  diganti `rgba()` supaya panel pengaturan tidak transparan.
+
 ## [1.0.3] — 2026-10-29
 
 ### Diubah

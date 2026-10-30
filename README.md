@@ -67,6 +67,10 @@ adb install -r TerraDash-1.0.3.apk
 > versi lama kalau ditandatangani dengan kunci yang sama — kalau berbeda,
 > harus uninstall dulu (setting + cache peta ikut hilang).
 
+> **WebView lama?** Sejak 1.0.4 dashboard punya polyfill `clamp()`/`min()` dan
+> pengganti flex `gap`, jadi tetap tampil normal di head unit yang WebView-nya
+> masih Chromium 61 (umum di unit 8227L). Tidak wajib update WebView.
+
 ### Izin yang dibutuhkan
 
 | Izin | Untuk apa |

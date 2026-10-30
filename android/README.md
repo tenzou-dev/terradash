@@ -204,7 +204,7 @@ Cara kerja singkat:
 | Pencarian tidak menemukan kampus/tempat | 1.0.3 sudah menggabungkan Esri + Photon + Nominatim; coba nama resmi lengkap + kota |
 | Muncul "App was denied access" saat mengaktifkan akses notifikasi | Android 13+ *restricted settings* untuk app sideload → lihat bagian 3 |
 | Karakter aneh di nama jalan/tujuan | sudah diperbaiki di 1.0.3 (fungsi `fixText`, termasuk mojibake ganda) |
-| Tampilan berantakan (jarak elemen rapat) | WebView HU terlalu tua; update **Android System WebView** lewat Play Store, minimal Chromium 84 |
+| Tampilan berantakan di HU lama (ikon besar, jam kecil, jadwal sholat berdempetan) | 1.0.4 sudah menambahkan polyfill untuk WebView Chromium < 79 (mis. Chromium 61 di unit 8227L). Kalau masih berantakan, update **Android System WebView** |
 | Play Protect memblokir | More details → Install anyway |
 | Buka app cuma kedip hitam lalu tutup (Android 16) | bug platform Android 16, lihat bagian 7 |
 
