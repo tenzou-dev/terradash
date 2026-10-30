@@ -71,6 +71,18 @@ adb install -r TerraDash-1.0.3.apk
 > pengganti flex `gap`, jadi tetap tampil normal di head unit yang WebView-nya
 > masih Chromium 61 (umum di unit 8227L). Tidak wajib update WebView.
 
+### Kompatibilitas
+
+| | |
+|---|---|
+| Android | 7.0 (API 24) ke atas |
+| Arsitektur CPU | **semua** — ARM 32-bit (armeabi-v7a), ARM 64-bit (arm64-v8a), x86, x86_64 |
+| WebView | Chromium 60+; yang lebih lama (mis. Chromium 61 di unit 8227L) sudah ditangani polyfill sejak 1.0.4 |
+
+APK-nya **tidak punya kode native** — di dalam APK tidak ada folder `lib/`,
+semuanya Java + HTML/CSS/JS. Jadi tidak perlu APK terpisah untuk 32-bit dan
+64-bit, dan ukurannya cuma ±140 KB.
+
 ### Izin yang dibutuhkan
 
 | Izin | Untuk apa |
