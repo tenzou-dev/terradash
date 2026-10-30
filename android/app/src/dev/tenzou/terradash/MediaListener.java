@@ -209,6 +209,14 @@ public class MediaListener extends NotificationListenerService {
                 case "pause":
                     t.pause();
                     break;
+                case "toggle":
+                    PlaybackState ps = m.controller.getPlaybackState();
+                    if (ps != null && ps.getState() == PlaybackState.STATE_PLAYING) {
+                        t.pause();
+                    } else {
+                        t.play();
+                    }
+                    break;
                 case "next":
                     t.skipToNext();
                     break;

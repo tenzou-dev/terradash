@@ -4,11 +4,13 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -16,6 +18,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.media.session.MediaSession;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,7 +26,9 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Base64;
+import android.util.Log;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -54,6 +59,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class MainActivity extends Activity {
@@ -197,6 +203,7 @@ public class MainActivity extends Activity {
         requestLocationPermission();
         buildAppsCache();
         maybeShowSetup();
+        initSwc();
     }
 
     /**
@@ -233,11 +240,13 @@ public class MainActivity extends Activity {
         super.onResume();
         if (web != null) web.onResume();
         hideSystemUi();
+        registerSwcReceiver();
     }
 
     @Override
     protected void onPause() {
         if (web != null) web.onPause();
+        unregisterSwcReceiver();
         super.onPause();
     }
 
@@ -821,5 +830,154 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Tombol steerwheel / headset                                         */
+    /*                                                                     */
+    /* Head unit mengirim tombol setir lewat salah satu dari tiga jalur:   */
+    /*   1. key event biasa ke jendela yang sedang fokus                  */
+    /*   2. media button lewat MediaSession (jalur resmi Android)          */
+    /*   3. broadcast gaya lama "musicservicecommand"                     */
+    /* Ketiganya ditangkap di sini lalu diteruskan ke MediaListener,       */
+    /* supaya next/prev/play-pause tetap jalan walau yang di depan layar   */
+    /* adalah TerraDash (bukan app pemutar musiknya).                      */
+    /* ------------------------------------------------------------------ */
+
+    private MediaSession swcSession;
+    private boolean swcReceiverOn = false;
+
+    private final BroadcastReceiver swcReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent == null) return;
+            String cmd = intent.getStringExtra("command");
+            if (cmd == null) cmd = intent.getStringExtra("action");
+            if (cmd == null) cmd = intent.getStringExtra("button");
+            if (cmd == null) return;
+            String c = cmd.toLowerCase(Locale.US);
+            if (c.indexOf("next") >= 0 || c.indexOf("forward") >= 0) {
+                forward("next");
+            } else if (c.indexOf("prev") >= 0 || c.indexOf("rewind") >= 0) {
+                forward("prev");
+            } else if (c.indexOf("toggle") >= 0 || c.indexOf("playpause") >= 0) {
+                forward("toggle");
+            } else if (c.equals("play") || c.equals("resume")) {
+                forward("play");
+            } else if (c.equals("pause") || c.equals("stop")) {
+                forward("pause");
+            }
+        }
+    };
+
+    private void initSwc() {
+        try {
+            swcSession = new MediaSession(this, "TerraDash");
+            swcSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS
+                    | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
+            swcSession.setCallback(new MediaSession.Callback() {
+                @Override
+                public void onPlay() {
+                    forward("play");
+                }
+
+                @Override
+                public void onPause() {
+                    forward("pause");
+                }
+
+                @Override
+                public void onStop() {
+                    forward("pause");
+                }
+
+                @Override
+                public void onSkipToNext() {
+                    forward("next");
+                }
+
+                @Override
+                public void onSkipToPrevious() {
+                    forward("prev");
+                }
+
+                @Override
+                public void onPlayFromMediaId(String mediaId, Bundle extras) {
+                    forward("play");
+                }
+            });
+            swcSession.setActive(true);
+            Log.d("TerraDash", "swc: media session aktif");
+        } catch (Throwable t) {
+            Log.w("TerraDash", "swc: gagal membuat media session", t);
+        }
+    }
+
+    private void registerSwcReceiver() {
+        if (swcReceiverOn) return;
+        try {
+            IntentFilter f = new IntentFilter();
+            f.addAction("com.android.music.musicservicecommand");
+            f.addAction("com.sec.android.app.music.musicservicecommand");
+            f.addAction("com.htc.music.musicservicecommand");
+            f.addAction("com.miui.player.musicservicecommand");
+            if (Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(swcReceiver, f, Context.RECEIVER_EXPORTED);
+            } else {
+                registerReceiver(swcReceiver, f);
+            }
+            swcReceiverOn = true;
+        } catch (Throwable t) {
+            Log.w("TerraDash", "swc: gagal daftar receiver", t);
+        }
+    }
+
+    private void unregisterSwcReceiver() {
+        if (!swcReceiverOn) return;
+        try {
+            unregisterReceiver(swcReceiver);
+        } catch (Throwable ignored) {
+        }
+        swcReceiverOn = false;
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event != null && handleMediaKey(event)) return true;
+        return super.dispatchKeyEvent(event);
+    }
+
+    private boolean handleMediaKey(KeyEvent e) {
+        String cmd;
+        switch (e.getKeyCode()) {
+            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+            case KeyEvent.KEYCODE_HEADSETHOOK:
+                cmd = "toggle";
+                break;
+            case KeyEvent.KEYCODE_MEDIA_PLAY:
+                cmd = "play";
+                break;
+            case KeyEvent.KEYCODE_MEDIA_PAUSE:
+            case KeyEvent.KEYCODE_MEDIA_STOP:
+                cmd = "pause";
+                break;
+            case KeyEvent.KEYCODE_MEDIA_NEXT:
+                cmd = "next";
+                break;
+            case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                cmd = "prev";
+                break;
+            default:
+                return false;
+        }
+        if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+            forward(cmd);
+        }
+        return true;
+    }
+
+    private void forward(String cmd) {
+        Log.d("TerraDash", "swc -> " + cmd);
+        MediaListener.command(cmd, "");
     }
 }

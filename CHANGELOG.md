@@ -3,6 +3,16 @@
 Semua perubahan penting TerraDash. Format mengikuti
 [Keep a Changelog](https://keepachangelog.com/id/1.1.0/).
 
+## [1.0.5] — 2026-10-30
+
+### Ditambahkan
+- **Dukungan tombol steerwheel** untuk next / prev / play-pause. APK sekarang
+  menangkap tiga jalur yang biasa dipakai head unit: key event langsung ke
+  jendela aktif, media button lewat `MediaSession`, dan broadcast lama
+  `com.android.music.musicservicecommand`. Semuanya diteruskan ke pemutar musik
+  yang sedang aktif, jadi tetap berfungsi walau TerraDash yang ada di depan.
+- Tombol volume tidak disentuh — tetap ditangani sistem/amplifier HU.
+
 ## [1.0.4] — 2026-10-30
 
 ### Diperbaiki
